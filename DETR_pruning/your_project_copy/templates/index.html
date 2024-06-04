@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Deep Learning Training Interface{% endblock %}
+
+{% block content %}
+
+<ul>
+    <li><a href="{{ url_for('fpgm_detr') }}">FPGM - DETR</a></li>
+    <li><a href="{{ url_for('fpgm_resnet') }}">FPGM - ResNet</a></li>
+    <li><a href="{{ url_for('synflow_detr') }}">Synflow - DETR</a></li>
+    <li><a href="{{ url_for('synflow_resnet') }}">Synflow - ResNet</a></li>
+</ul>
+{% endblock %}

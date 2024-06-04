@@ -1,0 +1,17 @@
+save path : VGG_pruning_40epoch_1RN_0.1RD
+{'arch': 'vgg', 'batch_size': 64, 'cuda': True, 'data_path': '/home/ashishr/filter-pruning-geometric-median/data/cifar-10-batches-py', 'dataset': 'cifar10', 'depth': 16, 'dist_type': 'l2', 'epoch_prune': 1, 'epochs': 40, 'evaluate': False, 'layer_begin': 1, 'layer_end': 1, 'layer_inter': 1, 'log_interval': 100, 'lr': 0.1, 'momentum': 0.9, 'no_cuda': False, 'pretrain_path': '', 'rate_dist': 0.1, 'rate_norm': 1.0, 'resume': '', 'save_path': 'VGG_pruning_40epoch_1RN_0.1RD', 'seed': 1, 'start_epoch': 0, 'test_batch_size': 256, 'use_precfg': False, 'use_pretrain': False, 'use_state_dict': False, 'weight_decay': 0.0001}
+Random Seed: 1
+python version : 3.8.3 (default, Jul  2 2020, 16:21:59)  [GCC 7.3.0]
+torch  version : 1.7.1
+cudnn  version : 8005
+Norm Pruning Rate: 1.0
+Distance Pruning Rate: 0.1
+Layer Begin: 1
+Layer End: 1
+Layer Inter: 1
+Epoch prune: 1
+use pretrain: False
+Pretrain path: 
+Dist type: l2
+Pre cfg: False
+=> creating model 'vgg'
