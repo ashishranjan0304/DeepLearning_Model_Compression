@@ -1,3 +1,4 @@
+
 import numpy as np
 import pandas as pd
 import torch
@@ -97,10 +98,11 @@ def run(args):
     if args.experiment == "multishot":
         # Iteratively prune for `args.prune_epochs` after initial pre-training
         for epoch in range(args.prune_epochs):
+            print("ashish")
             print('Pruning epoch {} of {}'.format(epoch + 1, args.prune_epochs))
             pruner = load.pruner(args.pruner)(generator.masked_parameters(model, args.prune_bias, args.prune_batchnorm, args.prune_residual))
             # Increase sparsity over the first `args.sparsity_increase_epochs` epochs
-            sparsity = 10**(-float(args.compression) * ((epoch + 1) / args.sparsity_increase_epochs))
+            sparsity = 10**(-float(args.compression) * ((epoch + 1) / args.prune_epochs))
             prune_loop(model, loss, pruner, prune_loader, device, sparsity, 
                        args.compression_schedule, args.mask_scope, 1, args.reinitialize, args.prune_train_mode, args.shuffle, args.invert)
             
@@ -150,9 +152,9 @@ def run(args):
         torch.save(optimizer.state_dict(),"{}/optimizer.pt".format(args.result_dir))
         torch.save(scheduler.state_dict(),"{}/scheduler.pt".format(args.result_dir))
 
-
-if __name__ == '__main__':
+def define_args():
     parser = argparse.ArgumentParser(description='Network Compression')
+    
     # Training Hyperparameters
     training_args = parser.add_argument_group('training')
     training_args.add_argument('--dataset', type=str, default='mnist',
@@ -192,6 +194,7 @@ if __name__ == '__main__':
                                help='multiplicative factor of learning rate drop (default: 0.1)')
     training_args.add_argument('--weight-decay', type=float, default=0.0,
                                help='weight decay (default: 0.0)')
+    
     # Pruning Hyperparameters
     pruning_args = parser.add_argument_group('pruning')
     pruning_args.add_argument('--pruner', type=str, default='rand',
@@ -199,7 +202,7 @@ if __name__ == '__main__':
                               help='prune strategy (default: rand)')
     pruning_args.add_argument('--compression', type=float, default=0.0,
                               help='quotient of prunable non-zero prunable parameters before and after pruning (default: 1.0)')
-    pruning_args.add_argument('--prune-epochs', type=int, default=1,
+    pruning_args.add_argument('--prune_epochs', type=int, default=5,
                               help='number of iterations for scoring (default: 1)')
     pruning_args.add_argument('--compression-schedule', type=str, default='exponential', choices=['linear', 'exponential'],
                               help='whether to use a linear or exponential compression schedule (default: exponential)')
@@ -233,12 +236,15 @@ if __name__ == '__main__':
                               help='list of number of prune-train cycles (levels) for multishot (default: [])')
     pruning_args.add_argument('--sparsity-increase-epochs', type=int, default=5,
                               help='Number of epochs over which to increase sparsity dynamically')
+    
     ## Experiment Hyperparameters ##
     parser.add_argument('--experiment', type=str, default='singleshot',
                         choices=['singleshot', 'multishot', 'unit-conservation',
                                  'layer-conservation', 'imp-conservation', 'schedule-conservation'],
                         help='experiment name (default: example)')
     parser.add_argument('--expid', type=str, default='',
+                        help='name used to save results (default: "")')
+    parser.add_argument('--output_dir', type=str, default='',
                         help='name used to save results (default: "")')
     parser.add_argument('--result-dir', type=str, default='Results/data',
                         help='path to directory to save results (default: "Results/data")')
@@ -252,8 +258,14 @@ if __name__ == '__main__':
                         help='random seed (default: 1)')
     parser.add_argument('--verbose', action='store_true',
                         help='print statistics during training and testing')
-    args = parser.parse_args()
+    
+    return parser
 
+
+if __name__ == '__main__':
+    parser = define_args()
+    args = parser.parse_args()
+    args.expid=args.output_dir
     ## Construct Result Directory ##
     if args.expid == "":
         print("WARNING: this experiment is not being saved.")

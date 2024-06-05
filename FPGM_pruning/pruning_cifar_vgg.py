@@ -37,6 +37,8 @@ parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 parser.add_argument('--save_path', default='./logs', type=str, metavar='PATH',
                     help='path to save prune model (default: current directory)')
+parser.add_argument('--output_dir', default='./logs', type=str, metavar='PATH',
+                    help='path to save prune model (default: current directory)')
 parser.add_argument('--arch', default='vgg', type=str, help='architecture to use')
 parser.add_argument('--depth', default=16, type=int, help='depth of the neural network')
 # compress rate
@@ -193,6 +195,7 @@ def prune_and_save_model(pruned_model, save_path, device='cpu'):
 
 def main():
     # Init logger
+    args.save_path=args.output_dir
     if not os.path.isdir(args.save_path):
         os.makedirs(args.save_path)
     log = open(os.path.join(args.save_path, 'log_seed_{}.txt'.format(args.seed)), 'w')

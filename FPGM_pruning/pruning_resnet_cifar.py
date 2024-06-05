@@ -39,6 +39,8 @@ parser.add_argument('--gammas', type=float, nargs='+', default=[0.1, 0.1,0.1,0.1
 # Checkpoints
 parser.add_argument('--print_freq', default=200, type=int, metavar='N', help='print frequency (default: 200)')
 parser.add_argument('--save_path', type=str, default='./', help='Folder to save checkpoints and log.')
+parser.add_argument('--output_dir', type=str, default='./', help='Folder to save checkpoints and log.')
+
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to latest checkpoint (default: none)')
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N', help='manual epoch number (useful on restarts)')
 parser.add_argument('--evaluate', dest='evaluate', action='store_true', help='evaluate model on validation set')
@@ -194,6 +196,7 @@ def prune_and_save_model(pruned_model, save_path, device='cpu'):
 
 def main():
     # Init logger
+    args.save_path=args.output_dir
     if not os.path.isdir(args.save_path):
         os.makedirs(args.save_path)
     log = open(os.path.join(args.save_path, 'log_seed_{}.txt'.format(args.manualSeed)), 'w')
