@@ -467,7 +467,7 @@ def plot_and_save_curves(history, save_path, epoch):
     plt.legend()
 
     plt.tight_layout()
-    plt.savefig(os.path.join(save_path, f'curve.png'))
+    plt.savefig(os.path.join(save_path, f'training_plots.png'))
     plt.close()
 
 def save_checkpoint(state, is_best, filepath):

@@ -420,7 +420,7 @@ def main():
         # measure elapsed time
         epoch_time.update(time.time() - start_time)
         start_time = time.time()
-        recorder.plot_curve(os.path.join(args.save_path, 'curve.png'))
+        recorder.plot_curve(os.path.join(args.save_path, 'training_plots.png'))
 
     log.close()
 

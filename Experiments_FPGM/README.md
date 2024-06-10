@@ -17,6 +17,7 @@ Filter Pruning via Geometric Median (FPGM) is a novel method for compressing dee
 
 ## Algorithm
 
+<<<<<<< HEAD
 ### FPGM Algorithm
 
 1. **Initialize**: 
@@ -37,6 +38,9 @@ Filter Pruning via Geometric Median (FPGM) is a novel method for compressing dee
    - Zeroize the selected filters to prune them.
 6. **Extract Pruned Model**: 
    - Extract the pruned model parameters \( W^* \).
+=======
+![FPGM Algorithm](/../images/FPGM_algo.png)
+>>>>>>> changes
 
 ## Limitations
 
@@ -44,6 +48,7 @@ Filter Pruning via Geometric Median (FPGM) is a novel method for compressing dee
 - **Pruning Interval**: The performance of pruning may vary depending on the interval at which pruning is performed during training.
 - **Dependency on Data**: The effectiveness of pruning can be influenced by the nature of the training data and the distribution of filter norms.
 
+<<<<<<< HEAD
 ## Application on Different Models
 
 ### ResNet
@@ -83,3 +88,8 @@ Filter Pruning via Geometric Median (FPGM) is a novel method for compressing dee
 
 FPGM provides an effective approach for compressing CNNs by pruning redundant filters based on the geometric median. It addresses the limitations of norm-based pruning methods and demonstrates significant improvements in both theoretical and practical performance.
 
+=======
+## Conclusion
+
+FPGM provides an effective approach for compressing CNNs by pruning redundant filters based on the geometric median. It addresses the limitations of norm-based pruning methods and demonstrates significant improvements in both theoretical and practical performance.
+>>>>>>> changes

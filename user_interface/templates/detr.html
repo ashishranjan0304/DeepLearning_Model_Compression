@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Train DETR Model</h1>
+<form method="post" action="/detr/stream_output" id="training-form">
+    <label for="model">Model:</label>
+    <select id="model" name="model" required>
+        <option value="detr">DETR</option>
+    </select><br>
+
+    <label for="algorithm">Algorithm:</label>
+    <select id="algorithm" name="algorithm" required>
+        <option value="">Select Algorithm</option>
+        <option value="FPGM">FPGM</option>
+        <option value="L1">L1</option>
+        <option value="L2">L2</option>
+        <option value="SNIP">SNIP</option>
+        <option value="Synflow">Synflow</option>
+        <option value="our_algo">our_algo</option>
+    </select><br>
+
+    <div id="main-params" style="display: none;">
+        <div id="main-params-fpgm-l1-l2" style="display: none;">
+            <label for="nproc_per_node">Number of GPUs:</label>
+            <input type="number" id="nproc_per_node" name="nproc_per_node" value="3"><br>
+            <label for="coco_path">COCO Path:</label>
+            <input type="text" id="coco_path" name="coco_path" value="../Data/open-images-bus-trucks/"><br>
+            <label for="epochs">Epochs:</label>
+            <input type="number" id="epochs" name="epochs" value="10"><br>
+            <label for="lr">Learning Rate:</label>
+            <input type="text" id="lr" name="lr" value="1e-4"><br>
+            <label for="batch_size">Batch Size:</label>
+            <input type="number" id="batch_size" name="batch_size" value="2"><br>
+            <label for="num_workers">Number of Workers:</label>
+            <input type="number" id="num_workers" name="num_workers" value="4"><br>
+            <label for="output_dir">Output Directory:</label>
+            <input type="text" id="output_dir" name="output_dir" value="DETR_output"><br>
+            <label for="resume">Resume Path:</label>
+            <input type="text" id="resume" name="resume" value="detr-r50_no-class-head.pth"><br>
+            <label for="layer_begin">Layer Begin:</label>
+            <input type="number" id="layer_begin" name="layer_begin" value="50"><br>
+            <label for="layer_end">Layer End:</label>
+            <input type="number" id="layer_end" name="layer_end" value="140"><br>
+            <div id="rate_dist_field" style="display: none;">
+                <label for="rate_dist">Rate Dist:</label>
+                <input type="text" id="rate_dist" name="rate_dist" value="0.3"><br>
+            </div>
+            <div id="rate_norm_field" style="display: none;">
+                <label for="rate_norm">Rate Norm:</label>
+                <input type="text" id="rate_norm" name="rate_norm" value="0.3"><br>
+            </div>
+        </div>
+
+        <div id="main-params-snip-synflow-our_algo" style="display: none;">
+            <label for="nproc_per_node">Number of GPUs:</label>
+            <input type="number" id="nproc_per_node" name="nproc_per_node" value="3"><br>
+            <label for="coco_path">COCO Path:</label>
+            <input type="text" id="coco_path" name="coco_path" value="../Data/open-images-bus-trucks/"><br>
+            <label for="epochs">Epochs:</label>
+            <input type="number" id="epochs" name="epochs" value="10"><br>
+            <label for="lr">Learning Rate:</label>
+            <input type="text" id="lr" name="lr" value="1e-4"><br>
+            <label for="batch_size">Batch Size:</label>
+            <input type="number" id="batch_size" name="batch_size" value="2"><br>
+            <label for="num_workers">Number of Workers:</label>
+            <input type="number" id="num_workers" name="num_workers" value="4"><br>
+            <label for="output_dir">Output Directory:</label>
+            <input type="text" id="output_dir" name="output_dir" value="DETR_output_snip"><br>
+            <label for="resume">Resume Path:</label>
+            <input type="text" id="resume" name="resume" value="detr-r50_no-class-head.pth"><br>
+            <label for="compression">Compression:</label>
+            <input type="text" id="compression" name="compression" value="0.5"><br>
+            <label for="pruner">Pruner:</label>
+            <input type="text" id="pruner" name="pruner" value=""><br>
+            <input type="checkbox" id="prune" name="prune">
+            <label for="prune">Apply Pruning</label><br>
+        </div>
+    </div>
+
+    <button type="submit">Run Command</button>
+</form>
+
+<h2>Training Accuracy</h2>
+<img id="training-image" src="" alt="Training Accuracy Image" style="max-width: 100%;">
+
+<div id="output"></div>
+
+<script>
+    document.getElementById('model').addEventListener('change', function() {
+        var algorithmFields = document.getElementById('algorithm-fields');
+        algorithmFields.style.display = this.value ? 'block' : 'none';
+        document.getElementById('main-params').style.display = 'none';
+    });
+
+    document.getElementById('algorithm').addEventListener('change', function() {
+        var mainParams = document.getElementById('main-params');
+        var model = document.getElementById('model').value;
+        var algorithm = this.value;
+
+        document.getElementById('main-params-fpgm-l1-l2').style.display = 'none';
+        document.getElementById('main-params-snip-synflow-our_algo').style.display = 'none';
+        // Hide other divs similarly
+
+        if ((algorithm === 'FPGM' || algorithm === 'L1' || algorithm === 'L2') && model === 'detr') {
+            document.getElementById('main-params-fpgm-l1-l2').style.display = 'block';
+            document.getElementById('rate_dist_field').style.display = algorithm === 'FPGM' ? 'block' : 'none';
+            document.getElementById('rate_norm_field').style.display = algorithm !== 'FPGM' ? 'block' : 'none';
+        } else if (algorithm === 'SNIP' || algorithm === 'Synflow' || algorithm === 'our_algo') {
+            document.getElementById('main-params-snip-synflow-our_algo').style.display = 'block';
+            document.getElementById('pruner').value = algorithm.toLowerCase();
+        }
+
+        mainParams.style.display = algorithm ? 'block' : 'none';
+    });
+
+    const form = document.getElementById('training-form');
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData).toString();
+        const eventSource = new EventSource(`/detr/stream_output?${params}`);
+        const outputDiv = document.getElementById('output');
+        const trainingImage = document.getElementById('training-image');
+        const outputDir = formData.get('output_dir');
+        trainingImage.src = `/detr/images/${outputDir}/training_plots.png`;
+
+        outputDiv.innerHTML = '';
+        eventSource.onmessage = function(event) {
+            if (event.data.includes('Process completed')) {
+                eventSource.close();
+            }
+            const lines = outputDiv.innerHTML.split('<br>');
+            if (lines.length > 100) {
+                lines.splice(0, lines.length - 100); // Keep only the last 100 lines
+            }
+            outputDiv.innerHTML = lines.join('<br>') + '<br>' + event.data;
+            outputDiv.scrollTop = outputDiv.scrollHeight; // Auto-scroll to the bottom
+        };
+
+        function refreshImage() {
+            const timestamp = new Date().getTime();
+            const url = trainingImage.src.split('?')[0];
+            trainingImage.src = `${url}?timestamp=${timestamp}`;
+        }
+        setInterval(refreshImage, 5000); // Refresh image every 5 seconds
+
+    });
+</script>
+{% endblock %}

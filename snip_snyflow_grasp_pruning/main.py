@@ -75,8 +75,8 @@ def run(args):
     print('Loading {} dataset.'.format(args.dataset))
     input_shape, num_classes = load.dimension(args.dataset) 
     prune_loader = load.dataloader(args.dataset, args.prune_batch_size, True, args.workers, args.prune_dataset_ratio * num_classes)
-    train_loader = load.dataloader(args.dataset, args.train_batch_size, True, args.workers)
-    test_loader = load.dataloader(args.dataset, args.test_batch_size, False, args.workers)
+    train_loader = load.dataloader(args.dataset, args.batch_size, True, args.workers)
+    test_loader = load.dataloader(args.dataset, args.batch_size, False, args.workers)
 
     ## Model, Loss, Optimizer ##
     print('Creating {}-{} model.'.format(args.model_class, args.model))
@@ -194,6 +194,8 @@ def define_args():
                                help='multiplicative factor of learning rate drop (default: 0.1)')
     training_args.add_argument('--weight-decay', type=float, default=0.0,
                                help='weight decay (default: 0.0)')
+    training_args.add_argument('--batch_size', type=int, default=256,
+                               help='batch size')
     
     # Pruning Hyperparameters
     pruning_args = parser.add_argument_group('pruning')
@@ -202,7 +204,7 @@ def define_args():
                               help='prune strategy (default: rand)')
     pruning_args.add_argument('--compression', type=float, default=0.0,
                               help='quotient of prunable non-zero prunable parameters before and after pruning (default: 1.0)')
-    pruning_args.add_argument('--prune_epochs', type=int, default=5,
+    pruning_args.add_argument('--prune_epochs', type=int, default=1,
                               help='number of iterations for scoring (default: 1)')
     pruning_args.add_argument('--compression-schedule', type=str, default='exponential', choices=['linear', 'exponential'],
                               help='whether to use a linear or exponential compression schedule (default: exponential)')
