@@ -16,31 +16,9 @@ Filter Pruning via Geometric Median (FPGM) is a novel method for compressing dee
 3. **Performance**: FPGM has been shown to achieve significant reductions in the number of floating-point operations (FLOPs) while maintaining or even improving model accuracy.
 
 ## Algorithm
-
-<<<<<<< HEAD
-### FPGM Algorithm
-
-1. **Initialize**: 
-   - Initialize the model parameters \( W \).
-2. **Train**: 
-   - Train the model for the specified number of epochs using the training data \( X \).
-3. **Compute Geometric Median**: 
-   - For each layer \( i \), compute the geometric median \( x_{GM} \) of the filters \( F_{i,j} \):
-     \[
-     x_{GM} = \arg \min_{x \in \mathbb{R}^{N_i \times K \times K}} \sum_{j=1}^{N_{i+1}} \|x - F_{i,j}\|_2
-     \]
-4. **Find Redundant Filters**: 
-   - Find filters nearest to the geometric median and prune them:
-     \[
-     F_{i,j} = \arg \min_{F_{i,j}} \|F_{i,j} - x_{GM}\|_2
-     \]
-5. **Zeroize Selected Filters**: 
-   - Zeroize the selected filters to prune them.
-6. **Extract Pruned Model**: 
-   - Extract the pruned model parameters \( W^* \).
 =======
-![FPGM Algorithm](/../images/FPGM_algo.png)
->>>>>>> changes
+![FPGM Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/images/FPGM_algo.png)
+
 
 ## Limitations
 

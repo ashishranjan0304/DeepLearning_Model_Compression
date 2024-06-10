@@ -12,7 +12,7 @@ SynFlow (Iterative Synaptic Flow Pruning) is a method designed to iteratively pr
 
 ## Algorithm
 
-![SynFlow Algorithm](/../images/synflow_algo.png)
+![SynFlow Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/images/synflow_algo.png)
 
 ## Limitations
 
