@@ -12,7 +12,7 @@ L1 Structured Filter Pruning is a method that removes filters with the smallest 
 
 ## Algorithm
 
-![L1 Pruning Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/images/L1_algo.png)
+![L1 Pruning Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/master/images/L1_algo.png)
 
 ## Limitations
 
