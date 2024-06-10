@@ -12,7 +12,7 @@ L2 Structured Filter Pruning is a method that removes filters with the smallest 
 
 ## Algorithm
 
-![L2 Pruning Algorithm](/../images/L2_algo.png)
+![L2 Pruning Algorithm](./images/L2_algo.png)
 
 ## Limitations
 
