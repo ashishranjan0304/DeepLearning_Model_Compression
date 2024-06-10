@@ -42,24 +42,24 @@ This project provides a user-friendly web interface for compressing deep learnin
 
 1. **Select Model:**
     - Choose the model you want to compress from the dropdown menu.
-    - ![Model Selection](/static/images/select_model.png)
+    - ![Model Selection](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/user_interface/static/images/select_model.png)
 
 2. **Select Algorithm:**
     - Based on the selected model, choose an appropriate pruning algorithm.
-    - ![Algorithm Selection](/static/images/select_algo.png)
+    - ![Algorithm Selection](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/user_interface/static/images/select_algo.png)
 
 3. **Configure Parameters:**
     - Depending on the selected algorithm, fill in the required training parameters.
-    - ![Configure Parameters](/static/images/select_arguments.png)
+    - ![Configure Parameters](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/user_interface/static/images/select_arguments.png)
 
 4. **Run Command:**
     - Click the "Run Command" button to start the training and pruning process.
     - The output will be displayed in real-time in the output section.
-    - ![Run Command](/static/images/run_cmd.png)
+    - ![Run Command](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/user_interface/static/images/run_cmd.png)
 
 5. **View Training Accuracy:**
     - A graph showing the training accuracy will be updated periodically.
-    - ![Training Accuracy](/static/images/output.png)
+    - ![Training Accuracy](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/user_interface/static/images/output.png)
 
 ## Features
 
