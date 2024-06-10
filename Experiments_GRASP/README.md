@@ -12,7 +12,7 @@ GraSP (Gradient Signal Preservation) is a pruning method that focuses on preserv
 
 ## Algorithm
 
-![GraSP Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/images/grasp.algo.png)
+![GraSP Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/master/images/grasp.algo.png)
 
 ## Limitations
 

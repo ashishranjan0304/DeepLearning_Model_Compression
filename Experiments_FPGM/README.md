@@ -17,7 +17,7 @@ Filter Pruning via Geometric Median (FPGM) is a novel method for compressing dee
 
 ## Algorithm
 =======
-![FPGM Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/images/FPGM_algo.png)
+![FPGM Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/master/images/FPGM_algo.png)
 
 
 ## Limitations
