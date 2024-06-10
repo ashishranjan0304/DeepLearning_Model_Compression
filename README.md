@@ -24,11 +24,11 @@ This project provides a user-friendly web interface for compressing deep learnin
     ```bash
     pip install -r requirements.txt
     ```
-4. Install dependencies:
+4. Go to Web Directory:
     ```bash
     cd user_interface
     ```
-6. Install dependencies:
+6. Make your environment setup:
     ```bash
     python setup_script.py
     ```
