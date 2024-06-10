@@ -12,7 +12,7 @@ SNIP (Single-shot Network Pruning based on Connection Sensitivity) is a pruning 
 
 ## Algorithm
 
-![SNIP Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/c553bb44333a57d8a27e0dcc1d97f67b31fc4c3b/images/SNIP_algo.png)
+![SNIP Algorithm](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/master/images/SNIP_algo.png)
 
 ## Limitations
 
