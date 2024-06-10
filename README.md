@@ -42,7 +42,7 @@ This project provides a user-friendly web interface for compressing deep learnin
 
 1. **Select Model:**
     - Choose the model you want to compress from the dropdown menu.
-    - ![Model Selection](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/master/user_interface/static/images/select_model.png)
+    - ![Model Selection](https://github.com/ashishranjan0304/DeepLearning_Model_Compression/blob/master/images/model_select.png)
 
 2. **Select Algorithm:**
     - Based on the selected model, choose an appropriate pruning algorithm.

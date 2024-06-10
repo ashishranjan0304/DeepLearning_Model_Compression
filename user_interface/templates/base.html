@@ -49,9 +49,17 @@
         .project-info h2 {
             margin-top: 0;
         }
-        .project-info ul {
-            list-style-type: disc;
-            padding-left: 20px;
+        .project-info .names {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        .names div {
+            margin: 10px;
+            text-align: center;
+        }
+        .names div p {
+            margin: 5px 0;
         }
     </style>
 </head>
@@ -66,7 +74,23 @@
     <div class="content">
         <div class="project-info">
             <h2>Project Information</h2>
-            <!-- Names removed as requested -->
+            <div class="names">
+                <div>
+                    <p>Ashish Ranjan</p>
+                </div>
+                <div>
+                    <p>Prof. Pradipta Biswas</p>
+                </div>
+                <div>
+                    <p>Prakalp Somawanshi</p>
+                </div>
+            </div>
+            <div class="links">
+                <a href="#arxiv" style="margin-right: 20px;">[Arxiv]</a>
+                <a href="https://github.com/ashishranjan0304/DeepLearning_Model_Compression.git" style="margin-right: 20px;">[Code]</a>
+                <a href="#talk" style="margin-right: 20px;">[Talk]</a>
+                <a href="#slides">[Slides]</a>
+            </div>
         </div>
         {% block content %}{% endblock %}
     </div>
