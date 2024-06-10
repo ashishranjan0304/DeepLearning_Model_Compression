@@ -1,214 +1,74 @@
-{% extends "base.html" %}
-
-{% block content %}
-<!-- Add Bootstrap CSS, Animate.css, AOS, and custom CSS for styling -->
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css"/>
-<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-<script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12"></script>
-<!-- Add MathJax script for rendering LaTeX -->
-<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-<script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
-<div class="container my-5 project-info">
-    <div class="text-center mb-5" data-aos="fade-down">
-        <h1 class="display-4">Project Model Compression</h1>
-        <p class="lead">Optimizing deep learning models for efficiency and performance</p>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-4" data-aos="fade-right">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Learning Model Compression Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        nav {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+        }
+        nav img {
+            height: 40px;
+            margin-right: 15px;
+        }
+        nav a {
+            margin: 0 15px;
+            text-decoration: none;
+            color: #333;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        .content {
+            margin-top: 20px;
+        }
+        #output {
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f9f9f9;
+            margin-top: 20px;
+        }
+        .project-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+        }
+        .project-info h2 {
+            margin-top: 0;
+        }
+        .project-info ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <img src="{{ url_for('static', filename='images/Shell_logo.png') }}" alt="Logo">
+        <a href="{{ url_for('index1') }}">Home</a>
+        <a href="{{ url_for('detr.index') }}">DETR</a>
+        <a href="{{ url_for('vgg.index') }}">VGG</a>
+        <a href="{{ url_for('resnet.index') }}">ResNet</a>
+    </nav>
+    <div class="content">
+        <div class="project-info">
             <h2>Project Information</h2>
-            <p>This project focuses on creating a user-friendly web interface for pruning any deep learning model. The goal is to make model compression accessible and efficient for users, regardless of their expertise in deep learning.</p>
+            <!-- Names removed as requested -->
         </div>
-        <div class="col-lg-6" data-aos="fade-left">
-            <img src="{{ url_for('static', filename='images/output.png') }}" class="img-fluid rounded" alt="Project Information Image">
-        </div>
+        {% block content %}{% endblock %}
     </div>
-
-    <div class="mb-5" data-aos="zoom-in">
-        <h2>Introduction</h2>
-        <div id="typed-introduction"></div>
-    </div>
-
-    <div class="row mb-5">
-        <div class="col-lg-6 order-lg-2 mb-4" data-aos="fade-left">
-            <h3>Importance of Model Compression</h3>
-            <p>Model compression is crucial for deploying deep learning models on resource-constrained devices such as mobile phones and IoT devices. It helps in reducing the latency and improving the efficiency of models, making them suitable for real-time applications.</p>
-        </div>
-        <div class="col-lg-6 order-lg-1" data-aos="fade-right">
-            <img src="{{ url_for('static', filename='images/shell_pic.jpeg') }}" class="img-fluid rounded" alt="Importance Image">
-        </div>
-    </div>
-
-    <div class="mb-5" data-aos="zoom-in">
-        <h2>Background</h2>
-        <h3 data-aos="fade-up">Introduction to Deep Learning</h3>
-        <p>Deep learning is a subset of machine learning that involves neural networks with many layers. It has been successfully applied to various fields, including image recognition, natural language processing, and autonomous driving.</p>
-
-        <h3 data-aos="fade-up">Challenges in Deep Learning</h3>
-        <p>Despite its success, deep learning models are often large and computationally intensive, making them challenging to deploy on devices with limited resources.</p>
-
-        <h3 data-aos="fade-up">Importance of Model Compression</h3>
-        <p>Model compression techniques address these challenges by reducing the model size and computational requirements. This enables the deployment of deep learning models on a wider range of devices and applications.</p>
-    </div>
-
-    <div class="mb-5" data-aos="zoom-in">
-        <h2>Types of Model Compression</h2>
-        <div class="row">
-            <div class="col-md-4" data-aos="fade-up">
-                <h3>Pruning</h3>
-                <p>Pruning involves removing unnecessary neurons or weights in a neural network, thereby reducing the model size and improving computational efficiency.</p>
-                <img src="{{ url_for('static', filename='images/pruning.jpg') }}" class="img-fluid rounded" alt="Pruning Image">
-            </div>
-            <div class="col-md-4" data-aos="fade-up">
-                <h3>Quantization</h3>
-                <p>Quantization reduces the precision of the weights and activations of a model, which can significantly decrease the model size and inference time.</p>
-                <img src="{{ url_for('static', filename='images/quan.png') }}" class="img-fluid rounded" alt="Quantization Image">
-            </div>
-            <div class="col-md-4" data-aos="fade-up">
-                <h3>Knowledge Distillation</h3>
-                <p>Knowledge distillation involves training a smaller model (student) to replicate the behavior of a larger model (teacher), thus achieving similar performance with fewer parameters.</p>
-                <img src="{{ url_for('static', filename='images/knowledge_dist.jpg') }}" class="img-fluid rounded" alt="Distillation Image">
-            </div>
-        </div>
-    </div>
-
-    <!-- Add the algorithms for each pruning technique with popping steps -->
-    <div class="mb-5" data-aos="zoom-in">
-        <h2>Pruning Algorithms</h2>
-
-        <!-- L1 Structured Pruning Algorithm -->
-        <div class="algorithm bg-light p-3 mb-4 rounded" data-aos="fade-up">
-            <h3 class="text-primary">L1 Structured Filter Pruning</h3>
-            <p>L1 structured pruning removes filters with the smallest L1 norm, assuming they have the least impact on the model's performance.</p>
-            <ul class="list-unstyled">
-                <li data-aos="fade-up" data-aos-delay="100">1. Initialize the model parameters \( W \).</li>
-                <li data-aos="fade-up" data-aos-delay="200">2. Train the model for the specified number of epochs using the training data \( X \).</li>
-                <li data-aos="fade-up" data-aos-delay="300">3. Compute L1 norms for each filter \( F_{i,j} \) in each layer \( i \):
-                    <script type="math/tex"> \|F_{i,j}\|_1 = \sum_{k=1}^{N_i} \sum_{m=1}^{K} \sum_{n=1}^{K} |F_{i,j,k,m,n}| </script>
-                </li>
-                <li data-aos="fade-up" data-aos-delay="400">4. Sort filters by their L1 norms and select those with the smallest norms to prune.</li>
-                <li data-aos="fade-up" data-aos-delay="500">5. Zeroize the selected filters.</li>
-                <li data-aos="fade-up" data-aos-delay="600">6. Extract the pruned model parameters \( W^* \).</li>
-            </ul>
-        </div>
-
-        <!-- L2 Structured Pruning Algorithm -->
-        <div class="algorithm bg-light p-3 mb-4 rounded" data-aos="fade-up">
-            <h3 class="text-primary">L2 Structured Filter Pruning</h3>
-            <p>L2 structured pruning removes filters with the smallest L2 norm, assuming they have the least impact on the model's performance.</p>
-            <ul class="list-unstyled">
-                <li data-aos="fade-up" data-aos-delay="100">1. Initialize the model parameters \( W \).</li>
-                <li data-aos="fade-up" data-aos-delay="200">2. Train the model for the specified number of epochs using the training data \( X \).</li>
-                <li data-aos="fade-up" data-aos-delay="300">3. Compute L2 norms for each filter \( F_{i,j} \) in each layer \( i \):
-                    <script type="math/tex"> \|F_{i,j}\|_2 = \sqrt{\sum_{k=1}^{N_i} \sum_{m=1}^{K} \sum_{n=1}^{K} F_{i,j,k,m,n}^2} </script>
-                </li>
-                <li data-aos="fade-up" data-aos-delay="400">4. Sort filters by their L2 norms and select those with the smallest norms to prune.</li>
-                <li data-aos="fade-up" data-aos-delay="500">5. Zeroize the selected filters.</li>
-                <li data-aos="fade-up" data-aos-delay="600">6. Extract the pruned model parameters \( W^* \).</li>
-            </ul>
-        </div>
-
-        <!-- FPGM Algorithm -->
-        <div class="algorithm bg-light p-3 mb-4 rounded" data-aos="fade-up">
-            <h3 class="text-primary">FPGM (Filter Pruning via Geometric Median)</h3>
-            <p>FPGM removes filters that are closest to the geometric median, assuming these filters have the least impact on the model's performance.</p>
-            <ul class="list-unstyled">
-                <li data-aos="fade-up" data-aos-delay="100">1. Initialize the model parameters \( W \).</li>
-                <li data-aos="fade-up" data-aos-delay="200">2. Train the model for the specified number of epochs using the training data \( X \).</li>
-                <li data-aos="fade-up" data-aos-delay="300">3. Compute the geometric median \( x_{GM} \) of filters in each layer \( i \):
-                    <script type="math/tex"> x_{GM} = \arg \min_{x \in \mathbb{R}^{N_i \times K \times K}} \sum_{j=1}^{N_{i+1}} \|x - F_{i,j}\|_2 </script>
-                </li>
-                <li data-aos="fade-up" data-aos-delay="400">4. Find and prune filters nearest to the geometric median.</li>
-                <li data-aos="fade-up" data-aos-delay="500">5. Extract the pruned model parameters \( W^* \).</li>
-            </ul>
-        </div>
-
-        <!-- SNIP Algorithm -->
-        <div class="algorithm bg-light p-3 mb-4 rounded" data-aos="fade-up">
-            <h3 class="text-primary">SNIP (Single-shot Network Pruning based on Connection Sensitivity)</h3>
-            <p>SNIP prunes connections based on their sensitivity to the loss function, retaining only the most important connections.</p>
-            <ul class="list-unstyled">
-                <li data-aos="fade-up" data-aos-delay="100">1. Initialize the network weights \( w \).</li>
-                <li data-aos="fade-up" data-aos-delay="200">2. Sample a mini-batch of training data \( D_b \).</li>
-                <li data-aos="fade-up" data-aos-delay="300">3. Compute connection sensitivity \( s_j \) for each connection \( j \):
-                    <script type="math/tex"> g_j(w; D_b) = \frac{\partial L(c \odot w; D)}{\partial c_j} \bigg|_{c=1} </script>
-                    <script type="math/tex"> s_j = \frac{|g_j(w; D_b)|}{\sum_{k=1}^m |g_k(w; D_b)|} </script>
-                </li>
-                <li data-aos="fade-up" data-aos-delay="400">4. Sort sensitivity scores \( s \) in descending order.</li>
-                <li data-aos="fade-up" data-aos-delay="500">5. Prune the top-\(\kappa\) connections based on sensitivity scores.</li>
-                <li data-aos="fade-up" data-aos-delay="600">6. Train the pruned network to get \( w^* \).</li>
-            </ul>
-        </div>
-
-        <!-- GraSP Algorithm -->
-        <div class="algorithm bg-light p-3 mb-4 rounded" data-aos="fade-up">
-            <h3 class="text-primary">GraSP (Gradient Signal Preservation)</h3>
-            <p>GraSP prunes connections that least affect the gradient signal, preserving the most important connections for training.</p>
-            <ul class="list-unstyled">
-                <li data-aos="fade-up" data-aos-delay="100">1. Initialize the network weights \( w \).</li>
-                <li data-aos="fade-up" data-aos-delay="200">2. Sample a mini-batch of training data \( D_b \).</li>
-                <li data-aos="fade-up" data-aos-delay="300">3. Compute GraSP scores \( g_j \) for each connection \( j \):
-                    <script type="math/tex"> g_j(w; D_b) = \left( H \frac{\partial L(w; D)}{\partial w_j} \right) \cdot w_j </script>
-                    <script type="math/tex"> s_j = \frac{|g_j(w; D_b)|}{\sum_{k=1}^m |g_k(w; D_b)|} </script>
-                </li>
-                <li data-aos="fade-up" data-aos-delay="400">4. Sort GraSP scores \( s \) in descending order.</li>
-                <li data-aos="fade-up" data-aos-delay="500">5. Prune the top-\(\kappa\) connections based on GraSP scores.</li>
-                <li data-aos="fade-up" data-aos-delay="600">6. Train the pruned network to get \( w^* \).</li>
-            </ul>
-        </div>
-
-        <!-- SynFlow Algorithm -->
-        <div class="algorithm bg-light p-3 mb-4 rounded" data-aos="fade-up">
-            <h3 class="text-primary">SynFlow (Iterative Synaptic Flow Pruning)</h3>
-            <p>SynFlow iteratively prunes connections by preserving synaptic flow, ensuring the network remains connected and functional.</p>
-            <ul class="list-unstyled">
-                <li data-aos="fade-up" data-aos-delay="100">1. Set the model to evaluation mode.</li>
-                <li data-aos="fade-up" data-aos-delay="200">2. Initialize the binary mask \( \mu \) to 1.</li>
-                <li data-aos="fade-up" data-aos-delay="300">3. Iteratively prune for \( n \) steps:</li>
-                <li data-aos="fade-up" data-aos-delay="400">&nbsp;&nbsp;a. Apply the mask \( \theta_{\mu} = \mu \odot \theta_0 \).</li>
-                <li data-aos="fade-up" data-aos-delay="500">&nbsp;&nbsp;b. Compute SynFlow objective \( R \):
-                    <script type="math/tex"> R = 1^T \left( \prod_{l=1}^{L} |\theta_{\mu}^{[l]}| \right) 1 </script>
-                </li>
-                <li data-aos="fade-up" data-aos-delay="600">&nbsp;&nbsp;c. Compute SynFlow score \( S \):
-                    <script type="math/tex"> S = \frac{\partial R}{\partial \theta_{\mu}} \odot \theta_{\mu} </script>
-                </li>
-                <li data-aos="fade-up" data-aos-delay="700">&nbsp;&nbsp;d. Determine the pruning threshold \( \tau \):
-                    <script type="math/tex"> \tau = (1 - \rho^{-\frac{k}{n}}) \text{ percentile of } S </script>
-                </li>
-                <li data-aos="fade-up" data-aos-delay="800">&nbsp;&nbsp;e. Update the mask \( \mu = (\tau < S) \).</li>
-                <li data-aos="fade-up" data-aos-delay="900">4. Return the pruned network \( f(x; \mu \odot \theta_0) \).</li>
-            </ul>
-        </div>
-    </div>
-</div>
-
-<!-- Add Bootstrap, jQuery, and AOS JavaScript libraries -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-<script>
-    AOS.init();
-</script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var options = {
-            strings: ["This project focuses on developing and implementing various deep learning model compression techniques. The primary aim is to reduce the size and computational requirements of neural network models without significantly impacting their performance."],
-            typeSpeed: 50,
-            backSpeed: 0,
-            showCursor: true,
-            cursorChar: '|',
-            autoInsertCss: true,
-            onComplete: function() {
-                // Additional action after typing is complete
-            }
-        };
-
-        var typed = new Typed("#typed-introduction", options);
-    });
-</script>
-{% endblock %}
+</body>
+</html>
