@@ -112,7 +112,7 @@ def get_args_parser():
    
     # Pruning parameters
     parser.add_argument('--prune', action='store_true', help='Whether to apply pruning')
-    parser.add_argument('--prune_epochs', default=10, type=int, help='Number of epochs to prune')
+    parser.add_argument('--prune_epochs', default=3, type=int, help='Number of epochs to prune')
     parser.add_argument('--compression', default='0.5', type=str, help='Compression rate for pruning')
     parser.add_argument('--pruner', default='mag', type=str, help='Pruner type')
     parser.add_argument('--prune_batch_size', default=64, type=int, help='Batch size for pruning data loader')
@@ -208,6 +208,23 @@ def apply_masks(model):
             for mask, param in zip(get_masks(module), module.parameters(recurse=False)):
                 param.data.mul_(mask)
 
+def calculate_fps(net, input_shape, device='cpu', num_iterations=100):
+    net.to(device)
+    net.eval()
+    total_time = 0.0
+
+    for _ in range(num_iterations):
+        input_data = torch.randn(*input_shape).to(device)
+        start_time = time.time()
+        with torch.no_grad():
+            net(input_data)
+        end_time = time.time()
+        total_time += end_time - start_time
+
+    avg_fps = num_iterations / total_time
+    return avg_fps
+
+
 def calculate_sparsity(model):
     sparsity_dict = {}
     total_params = 0
@@ -245,6 +262,91 @@ def print_sparsity(sparsity_dict, total_params, sparse_params, overall_sparsity)
     print(f"Sparse Parameters: {sparse_params}")
     print(f"Overall Sparsity: {overall_sparsity:.4f}")
     print(f"Percentage of Pruned Parameters: {overall_sparsity * 100:.2f}%")
+
+def calculate_parameters_and_size(net):
+    total_trainable = 0
+    total_params = 0
+    pruned_params = 0
+    
+    for name, param in net.named_parameters():
+        total_params += param.numel()  # Count all parameters
+        if param.requires_grad:
+            total_trainable += param.numel()
+    
+    for name, module in net.named_modules():
+        if hasattr(module, 'weight') and module.weight is not None:
+            total_elements = module.weight.nelement()
+            pruned_elements = torch.sum(module.weight == 0).item()
+            pruned_params += pruned_elements
+        
+        if hasattr(module, 'bias') and module.bias is not None:
+            total_elements = module.bias.nelement()
+            pruned_elements = torch.sum(module.bias == 0).item()
+            pruned_params += pruned_elements
+    
+    remaining_params = total_params - pruned_params
+    
+    return {
+        'total_trainable': total_trainable,
+        'pruned_params': pruned_params,
+        'remaining_params': remaining_params
+    }
+
+import matplotlib.pyplot as plt
+import os
+
+import matplotlib.pyplot as plt
+import os
+
+def plot_metrics(metrics, fps, best_ap, output_dir):
+    groups = {
+        'Parameters': [
+            ('Total Trainable Parameters', metrics['total_trainable']),
+            ('Pruned Parameters', metrics['pruned_params']),
+            ('Remaining Parameters', metrics['remaining_params'])
+        ],
+        'Performance': [
+            ('Average FPS', fps)
+        ],
+        'Validation Metrics': [
+            ('Best AP (%)', best_ap)
+        ]
+    }
+
+    colors = [
+        'skyblue', 'lightgreen', 'salmon', 'lightcoral',
+        'mediumpurple', 'orange', 'gold', 'lightpink',
+        'turquoise', 'yellowgreen', 'cyan', 'magenta'
+    ]
+
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 6))  # Adjusted layout to 1 row and 3 columns
+    fig.suptitle('Model Metrics After Pruning', fontsize=20)
+
+    color_idx = 0
+
+    for ax, (group_name, group_metrics) in zip(axes, groups.items()):  # Adjusted to zip with axes directly
+        labels, values = zip(*group_metrics)
+        values = [v.cpu().item() if torch.is_tensor(v) else v for v in values]  # Ensure values are on CPU and converted to numbers
+
+        bar_colors = colors[color_idx:color_idx+len(labels)]
+        bars = ax.barh(range(len(labels)), values, color=bar_colors)
+        ax.set_title(group_name, fontsize=16)
+        ax.set_yticks(range(len(labels)))
+        ax.set_yticklabels(labels, rotation=0, ha='right')
+
+        for i, bar in enumerate(bars):
+            ax.text(bar.get_width(), bar.get_y() + bar.get_height()/2.0, f'{values[i]:.2f}', va='center', ha='left', fontsize=12, color='black')
+
+        color_idx += len(labels)
+
+    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
+    os.makedirs(output_dir, exist_ok=True)
+    plot_path = os.path.join(output_dir, 'model_metrics.png')
+    plt.savefig(plot_path)
+    plt.close()
+    print(f"Plot saved at {plot_path}")
+
+
 
 def main(args):
     utils.init_distributed_mode(args)
@@ -323,11 +425,21 @@ def main(args):
             utils.save_on_master(coco_evaluator.coco_eval["bbox"].eval, output_dir / "eval.pth")
         
         # Apply masks to parameters
-        #apply_masks(model)
+        apply_masks(model)
 
         # Calculate and print the sparsity
         sparsity_dict, total_params, sparse_params, overall_sparsity = calculate_sparsity(model)
         print_sparsity(sparsity_dict, total_params, sparse_params, overall_sparsity)
+
+        # Calculate FPS and other metrics
+        input_shape = (1, 3, 800, 800)
+        FPS = calculate_fps(model_without_ddp, input_shape, device=device)
+        print("Average FPS:", FPS)
+        
+        metrics = calculate_parameters_and_size(model_without_ddp)
+
+        # Plot the metrics
+        plot_metrics(metrics, FPS, best_ap, args.output_dir)
 
         return
     #print(model)
@@ -349,7 +461,8 @@ def main(args):
         print(type(pruner))
         print("ashish ashish")
         generator_detr.print_masked_parameters_info(model_without_ddp)
-        sparsity = 10**(-float(args.compression))
+        #sparsity = 10**(-float(args.compression))
+        sparsity=1-float(args.compression)
         prune_loop(model_without_ddp, criterion, pruner, prune_loader, device, sparsity, args.compression_schedule, args.mask_scope, args.prune_epochs, args.reinitialize, args.prune_train_mode, args.shuffle, args.invert)
     
     
@@ -418,10 +531,20 @@ def main(args):
         print_sparsity(sparsity_dict, total_params, sparse_params, overall_sparsity)
 
     
+    # Calculate FPS and other metrics
+    input_shape = (1, 3, 800, 800)
+    FPS = calculate_fps(model_without_ddp, input_shape, device=device)
+    print("Average FPS:", FPS)
+    
+    metrics = calculate_parameters_and_size(model_without_ddp)
+
+    # Plot the metrics
+    plot_metrics(metrics, FPS, best_ap, args.output_dir)
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
+
  
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])

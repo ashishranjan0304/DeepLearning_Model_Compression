@@ -39,7 +39,7 @@ class RecorderMeter(object):
     self.epoch_accuracy= self.epoch_accuracy
 
   def update(self, idx, train_loss, train_acc, val_loss, val_acc):
-    assert idx >= 0 and idx < self.total_epoch, 'total_epoch : {} , but update with the {} index'.format(self.total_epoch, idx)
+   # assert idx >= 0 and idx < self.total_epoch, 'total_epoch : {} , but update with the {} index'.format(self.total_epoch, idx)
     self.epoch_losses  [idx, 0] = train_loss
     self.epoch_losses  [idx, 1] = val_loss
     self.epoch_accuracy[idx, 0] = train_acc

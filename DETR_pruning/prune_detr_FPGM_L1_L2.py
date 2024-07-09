@@ -133,6 +133,61 @@ def get_args_parser():
     parser.add_argument("--learning_rate", type=float, default=0.01, help="Learning rate")
     parser.add_argument("--print_freq", type=int, default=1, help="Print frequency")
     return parser
+import matplotlib.pyplot as plt
+import os
+
+def plot_metrics(metrics, fps, best_ap, output_dir):
+    groups = {
+        'Parameters': [
+            ('Total Trainable Parameters', metrics['total_trainable']),
+            ('Pruned Parameters', metrics['pruned_params']),
+            ('Remaining Parameters', metrics['remaining_params'])
+        ],
+        'Model Size (MB)': [
+            ('Model Size (MB)', metrics['model_size_MB']),
+            ('Pruned Model Size (MB)', metrics['pruned_model_size_MB'])
+        ],
+        'Performance': [
+            ('Average FPS', fps)
+        ],
+        'Validation Metrics': [
+            ('Best AP (%)', best_ap)
+        ]
+    }
+
+    colors = [
+        'skyblue', 'lightgreen', 'salmon', 'lightcoral',
+        'mediumpurple', 'orange', 'gold', 'lightpink',
+        'turquoise', 'yellowgreen', 'cyan', 'magenta'
+    ]
+
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(18, 12))
+    fig.suptitle('Model Metrics After Pruning', fontsize=20)
+
+    color_idx = 0
+
+    for ax, (group_name, group_metrics) in zip(axes.flatten(), groups.items()):
+        labels, values = zip(*group_metrics)
+        values = [v.cpu().item() if torch.is_tensor(v) else v for v in values]  # Ensure values are on CPU and converted to numbers
+
+        bar_colors = colors[color_idx:color_idx+len(labels)]
+        bars = ax.barh(range(len(labels)), values, color=bar_colors)
+        ax.set_title(group_name, fontsize=16)
+        ax.set_yticks(range(len(labels)))
+        ax.set_yticklabels(labels, rotation=0, ha='right')
+
+        for bar, label in zip(bars, values):
+            ax.text(bar.get_width(), bar.get_y() + bar.get_height()/2.0, f'{label:.2f}', va='center', ha='left', fontsize=12, color='black')
+
+        color_idx += len(labels)
+
+    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
+    os.makedirs(output_dir, exist_ok=True)
+    plot_path = os.path.join(output_dir, 'model_metrics.png')
+    plt.savefig(plot_path)
+    plt.close()
+    print(f"Plot saved at {plot_path}")
+
 
 def calculate_sparsity(module):
     """Calculate the sparsity of a module."""
@@ -152,6 +207,7 @@ def show_sparsity(model):
         if sparsity is not None:
             print(f"{name}: {sparsity:.2f}%")
 
+
 def calculate_parameters_and_size(net):
     total_trainable = 0
     total_params = 0
@@ -159,24 +215,14 @@ def calculate_parameters_and_size(net):
     model_size = 0
     pruned_model_size = 0
     
-    print('Trainable parameters:')
     for name, param in net.named_parameters():
         param_size = param.numel() * param.element_size()
         model_size += param_size  # Calculate the size of each parameter
         total_params += param.numel()  # Count all parameters
         if param.requires_grad:
-            print(name, '\t', param.numel())
             total_trainable += param.numel()
     
-    print()
-    print('Total trainable parameters:', total_trainable)
-    
-    # Check pruned parameters and calculate pruned model size
     for name, module in net.named_modules():
-        # Skip the root module itself
-        if name == '':
-            continue
-        
         if hasattr(module, 'weight') and module.weight is not None:
             total_elements = module.weight.nelement()
             pruned_elements = torch.sum(module.weight == 0).item()
@@ -191,16 +237,17 @@ def calculate_parameters_and_size(net):
     
     remaining_params = total_params - pruned_params
     
-    print()
-    print("Parameters pruned:", pruned_params)
-    print("Remaining parameters:", remaining_params)
-    print("Total parameters:", total_params)
-    
-    # Convert model size to MB
     model_size_MB = model_size / (1024 ** 2)
     pruned_model_size_MB = pruned_model_size / (1024 ** 2)
-    print("Model size (MB):", model_size_MB)
-    print("Model size after pruning (MB):", pruned_model_size_MB)
+    
+    return {
+        'total_trainable': total_trainable,
+        'pruned_params': pruned_params,
+        'remaining_params': remaining_params,
+        'model_size_MB': model_size_MB,
+        'pruned_model_size_MB': pruned_model_size_MB
+    }
+
 
 def calculate_fps(net, input_shape, device='cpu', num_iterations=100):
     net.to(device)
@@ -217,6 +264,7 @@ def calculate_fps(net, input_shape, device='cpu', num_iterations=100):
 
     avg_fps = num_iterations / total_time
     return avg_fps
+
 
 class Mask:
     def __init__(self, model, args):
@@ -511,17 +559,17 @@ def main(args):
                                               data_loader_val, base_ds, device, args.output_dir)
         # if args.output_dir:
         #     utils.save_on_master(coco_evaluator.coco_eval["bbox"].eval, output_dir / "eval.pth")
-        input_shape = (2, 3, 800, 800)  # Example input shape, adjust according to your model
-        # Calculate FPS
+        input_shape = (1, 3, 800, 800)  # Example input shape, adjust according to your model
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print("Calculating FPS...")
         FPS = calculate_fps(model_without_ddp, input_shape, device=device)
         print("Average FPS:", FPS)
-        # Calculate and show the final sparsity after training
         show_sparsity(model_without_ddp)
-        #Total number of parameters after pruning
-        calculate_parameters_and_size(model_without_ddp)
+        metrics = calculate_parameters_and_size(model_without_ddp)
+        best_ap = test_stats['coco_eval_bbox'][0] * 100  # Assuming AP at IoU=0.50:0.95 is the first value and converting it to percentage
+        plot_metrics(metrics, FPS, best_ap, args.output_dir)
         return
+
 
     # Start training
     best_ap = 0.0  # Initialize the variable to keep track of the highest AP
@@ -609,9 +657,15 @@ def main(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print(f"Training time: {total_time_str}")
 
-    # Calculate and show the final sparsity after training
+    input_shape = (2, 3, 800, 800)  # Example input shape, adjust according to your model
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print("Calculating FPS...")
+    FPS = calculate_fps(model_without_ddp, input_shape, device=device)
+    print("Average FPS:", FPS)
     show_sparsity(model_without_ddp)
-    #Total number of parameters after pruning
+    metrics = calculate_parameters_and_size(model_without_ddp)
+    plot_metrics(metrics, FPS, best_ap, args.output_dir)
+
 
 
 

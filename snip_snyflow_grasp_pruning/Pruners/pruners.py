@@ -315,15 +315,16 @@ class SynSNIP(Pruner):
 
 import torch
 
-class MagSNIP(Pruner):
-    def __init__(self, masked_parameters, mag_weight=0.5, snip_weight=0.5):
-        super(MagSNIP, self).__init__(masked_parameters)
-        self.mag_weight = mag_weight
-        self.snip_weight = snip_weight
 
-    def score(self, model, criterion, dataloader, device):
+class OurAlgo(Pruner):
+    def __init__(self, masked_parameters, mag_weight=0.5, grad_weight=0.5):
+        super(OurAlgo, self).__init__(masked_parameters)
+        self.mag_weight = mag_weight
+        self.grad_weight = grad_weight
+
+    def score(self, model, loss, dataloader, device):
         mag_scores = {}
-        snip_scores = {}
+        grad_scores = {}
 
         # Calculate Magnitude scores
         for _, p in self.masked_parameters:
@@ -335,41 +336,35 @@ class MagSNIP(Pruner):
 
         # Ensure model is in train mode
         model.train()
-        criterion.train()
 
-        # Metric logger for debugging
-        metric_logger = utils.MetricLogger(delimiter="  ")
-
-        for samples, targets in metric_logger.log_every(dataloader, 10, 'SNIP Scoring:'):
-            samples = samples.to(device)
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        # Compute gradient
+        for batch_idx, (data, target) in enumerate(dataloader):
+            data, target = data.to(device), target.to(device)
 
             # Forward pass
-            outputs = model(samples)
-            loss_dict = criterion(outputs, targets)
-            weight_dict = criterion.weight_dict
-            loss = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
+            output = model(data)
+            loss_val = loss(output, target)
 
             # Backward pass
             model.zero_grad()
-            loss.backward()
+            loss_val.backward()
 
-        # Calculate SNIP scores |g * theta|
+        # Calculate gradient scores |g * theta|
         for m, p in self.masked_parameters:
-            snip_scores[id(p)] = torch.clone(m.grad).detach().abs_() * torch.clone(p.data).detach().abs_()
+            grad_scores[id(p)] = torch.clone(m.grad).detach().abs_() * torch.clone(p.data).detach().abs_()
             p.grad.data.zero_()
             m.grad.data.zero_()
             m.requires_grad = False
 
-        # Normalize SNIP scores
-        all_snip_scores = torch.cat([torch.flatten(v) for v in snip_scores.values()])
-        snip_norm = torch.sum(all_snip_scores)
-        for key in snip_scores:
-            snip_scores[key].div_(snip_norm)
+        # Normalize gradient scores
+        all_grad_scores = torch.cat([torch.flatten(v) for v in grad_scores.values()])
+        grad_norm = torch.sum(all_grad_scores)
+        for key in grad_scores:
+            grad_scores[key].div_(grad_norm)
 
-        # Combine Magnitude and SNIP scores using weighted sum
+        # Combine Magnitude and Gradient scores using weighted sum
         for _, p in self.masked_parameters:
-            combined_score = self.mag_weight * mag_scores[id(p)] + self.snip_weight * snip_scores[id(p)]
+            combined_score = self.mag_weight * mag_scores[id(p)] + self.grad_weight * grad_scores[id(p)]
             self.scores[id(p)] = combined_score
 
         # Normalize combined scores
@@ -377,6 +372,8 @@ class MagSNIP(Pruner):
         combined_norm = torch.sum(all_combined_scores)
         for _, p in self.masked_parameters:
             self.scores[id(p)].div_(combined_norm)
+
+
 
 class MagSNIPnorm(Pruner):
     def __init__(self, masked_parameters, mag_weight=0.2, snip_weight=0.8):

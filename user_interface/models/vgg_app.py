@@ -22,6 +22,7 @@ def stream_output():
     common_params = {
         'dataset': request.args.get('dataset'),
         'output_dir': request.args.get('output_dir'),
+        'epochs': request.args.get('epochs'),
     }
 
     common_params = {k: v for k, v in common_params.items() if v is not None}
@@ -30,37 +31,40 @@ def stream_output():
         algo_params = {
             'rate_norm': request.args.get('rate_norm'),
             'depth': request.args.get('depth'),
-            'batch-size': request.args.get('batch_size'),
-            'epochs': request.args.get('epochs'),
+            'batch_size': request.args.get('batch_size'),
+            'resume': request.args.get('resume')
         }
         algo_params = {k: v for k, v in algo_params.items() if v is not None}
-        command = f"CUDA_VISIBLE_DEVICES=1 python ../FPGM_pruning/pruning_cifar_vgg.py ../Data --dataset {common_params['dataset']} --arch vgg " + \
+        command = f"CUDA_VISIBLE_DEVICES=0 python ../FPGM_pruning/pruning_cifar_vgg.py ../Data --dataset {common_params['dataset']} --arch vgg " + \
                   ' '.join([f"--{k}={v}" for k, v in algo_params.items()]) + \
-                  f" --rate_norm={algo_params['rate_norm']} --output_dir={common_params['output_dir']}"
+                  f" --rate_norm={algo_params['rate_norm']} --output_dir={common_params['output_dir']} --epochs={common_params['epochs']}"
     elif algorithm == 'FPGM':
         algo_params = {
             'rate_dist': request.args.get('rate_dist'),
             'depth': request.args.get('depth'),
-            'batch-size': request.args.get('batch_size'),
-            'epochs': request.args.get('epochs'),
+            'batch_size': request.args.get('batch_size'),
+            'resume': request.args.get('resume')
         }
         algo_params = {k: v for k, v in algo_params.items() if v is not None}
-        command = f"CUDA_VISIBLE_DEVICES=1 python ../FPGM_pruning/pruning_cifar_vgg.py ../Data --dataset {common_params['dataset']} --arch vgg " + \
+        command = f"CUDA_VISIBLE_DEVICES=2 python ../FPGM_pruning/pruning_cifar_vgg.py ../Data --dataset {common_params['dataset']} --arch vgg " + \
                   ' '.join([f"--{k}={v}" for k, v in algo_params.items()]) + \
-                  f" --rate_dist={algo_params['rate_dist']} --output_dir={common_params['output_dir']}"
+                  f" --rate_dist={algo_params['rate_dist']} --output_dir={common_params['output_dir']} --epochs={common_params['epochs']}"
     elif algorithm in ['SNIP', 'Synflow', 'GRASP', 'our_algo']:
         algo_params = {
             'compression': request.args.get('compression'),
             'pruner': request.args.get('pruner'),
             'batch_size': request.args.get('batch_size'),
-            'epochs': request.args.get('epochs'),
+            'experiment': request.args.get('experiment'),
+            'prune_epochs': request.args.get('prune_epochs')
         }
-        if request.args.get('prune'):
-            algo_params['prune'] = ''
+        if request.args.get('pretrained'):
+            algo_params['pretrained'] = 'True'
+            if request.args.get('pretrained_path'):
+                algo_params['pretrained_path'] = request.args.get('pretrained_path')
         algo_params = {k: v for k, v in algo_params.items() if v is not None}
         command = f"python ../snip_snyflow_grasp_pruning/main.py --dataset {common_params['dataset']} --model vgg16 " + \
                   ' '.join([f"--{k}={v}" for k, v in algo_params.items()]) + \
-                  f" --pruner={algo_params['pruner']} --output_dir={common_params['output_dir']}"
+                  f" --pruner={algo_params['pruner']} --output_dir={common_params['output_dir']} --epochs={common_params['epochs']}"
     else:
         return Response(f"Unrecognized algorithm {algorithm}", status=400)
 

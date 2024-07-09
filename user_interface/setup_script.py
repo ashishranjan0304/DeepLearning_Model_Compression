@@ -8,8 +8,10 @@ import numpy as np
 
 print("ashish")
 
-# Change to the Data directory
-os.chdir("../Data")
+# Ensure the Data directory exists and change to it
+data_dir = "../Data"
+os.makedirs(data_dir, exist_ok=True)
+os.chdir(data_dir)
 
 # Install required packages and download data if not already present
 if not os.path.exists('open-images-bus-trucks'):
@@ -17,19 +19,17 @@ if not os.path.exists('open-images-bus-trucks'):
     subprocess.run(['tar', '-xf', 'open-images-bus-trucks.tar.xz'])
     os.remove('open-images-bus-trucks.tar.xz')
 
-# Change to the Experiments_FPGM directory
-os.chdir("../Experiments_FPGM")
 
 # Move to the 'annotations' directory and copy annotation files
-os.chdir("../Data/open-images-bus-trucks/annotations")
+os.chdir("open-images-bus-trucks/annotations")
 subprocess.run(['cp', 'mini_open_images_train_coco_format.json', 'instances_train2017.json'])
 subprocess.run(['cp', 'mini_open_images_val_coco_format.json', 'instances_val2017.json'])
 
 # Move back to the Experiments_FPGM directory
-os.chdir("../../../Experiments_FPGM")
+os.chdir("../../")
 
 # Change back to the Data directory
-os.chdir("../Data/open-images-bus-trucks")
+os.chdir("open-images-bus-trucks")
 
 # Create symbolic links for image directories
 if not os.path.exists('train2017'):
@@ -37,12 +37,10 @@ if not os.path.exists('train2017'):
 if not os.path.exists('val2017'):
     os.symlink('images/', 'val2017')
 
-# Change to the Experiments_FPGM directory
-os.chdir("../../Experiments_FPGM")
 
 # Define the classes for detection
 CLASSES = ['', 'BUS', 'TRUCK']
-
+os.chdir("../")
 # Import required libraries
 from torch_snippets import *
 

@@ -172,7 +172,7 @@ def pruner(method):
         'grasp': pruners_DETR.GraSP,
         'synflow' : pruners_DETR.SynFlow,
         'synsnip' : pruners_DETR.SynSNIP,
-        'magsnip' : pruners_DETR.MagSNIP,
+        'our_algo' : pruners_DETR.OurAlgo,
         'magsnipnorm' : pruners_DETR.MagSNIPnorm,
         'magsnipvar' : pruners_DETR.MagSNIPvar,
         'bayes' : pruners_DETR.BayesianPruner

@@ -74,28 +74,21 @@ if args.use_cuda:
     torch.cuda.manual_seed_all(args.manualSeed)
 cudnn.benchmark = True
 
+import matplotlib.pyplot as plt
+
 def calculate_parameters_and_size(net):
     total_trainable = 0
-    total_params = 0
     pruned_params = 0
     model_size = 0
     pruned_model_size = 0
-    
-    print('Trainable parameters:')
+
     for name, param in net.named_parameters():
         param_size = param.numel() * param.element_size()
-        model_size += param_size  # Calculate the size of each parameter
-        total_params += param.numel()  # Count all parameters
+        model_size += param_size
         if param.requires_grad:
-            #print(name, '\t', param.numel())
             total_trainable += param.numel()
-    
-    print()
-    print('Total trainable parameters:', total_trainable)
-    
-    # Check pruned parameters and calculate pruned model size
+
     for name, module in net.named_modules():
-        # Skip the root module itself
         if name == '':
             continue
         
@@ -110,19 +103,18 @@ def calculate_parameters_and_size(net):
             pruned_elements = torch.sum(module.bias == 0).item()
             pruned_params += pruned_elements
             pruned_model_size += (total_elements - pruned_elements) * module.bias.element_size()
-    
-    remaining_params = total_params - pruned_params
-    
-    print()
-    print("Parameters pruned:", pruned_params)
-    print("Remaining parameters:", remaining_params)
-    print("Total parameters:", total_params)
-    
-    # Convert model size to MB
+
+    remaining_params = total_trainable - pruned_params
     model_size_MB = model_size / (1024 ** 2)
     pruned_model_size_MB = pruned_model_size / (1024 ** 2)
-    print("Model size (MB):", model_size_MB)
-    print("Model size after pruning (MB):", pruned_model_size_MB)
+
+    return {
+        'total_trainable': total_trainable,
+        'pruned_params': pruned_params,
+        'remaining_params': remaining_params,
+        'model_size_MB': model_size_MB,
+        'pruned_model_size_MB': pruned_model_size_MB
+    }
 
 def calculate_fps(net, input_shape, device='cpu', num_iterations=100):
     net.to(device)
@@ -140,8 +132,83 @@ def calculate_fps(net, input_shape, device='cpu', num_iterations=100):
     avg_fps = num_iterations / total_time
     return avg_fps
 
+def get_test_loader_time(test_loader, net, criterion, log):
+    start_time = time.time()
+    val_acc_1, val_los_1 = validate(test_loader, net, criterion, log)
+    end_time = time.time()
+    total_time = end_time - start_time
+    num_images = len(test_loader.dataset)
+    time_per_image = (total_time / num_images) * 1000  # Convert to milliseconds
+    total_time = total_time * 1000  # Convert to milliseconds
+    return total_time, num_images, time_per_image, val_acc_1.cpu().item(), val_los_1.cpu().item()
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+import matplotlib.pyplot as plt
+import os
+import torch
+
+def plot_metrics(metrics, fps, total_time, time_per_image, val_acc_1, val_los_1, output_dir):
+    groups = {
+        'Parameters': [
+            ('Total Trainable Parameters', metrics['total_trainable']),
+            ('Pruned Parameters', metrics['pruned_params']),
+            ('Remaining Parameters', metrics['remaining_params'])
+        ],
+        'Model Size (MB)': [
+            ('Model Size (MB)', metrics['model_size_MB']),
+            ('Pruned Model Size (MB)', metrics['pruned_model_size_MB'])
+        ],
+        'Performance': [
+            ('Average FPS', fps),
+            ('Total Time (ms)', total_time),
+            ('Time per Image (ms)', time_per_image)
+        ],
+        'Validation Metrics': [
+            ('Val Accuracy (%)', val_acc_1),
+            ('Val Loss', val_los_1)
+        ]
+    }
+
+    colors = [
+        'skyblue', 'lightgreen', 'salmon', 'lightcoral', 
+        'mediumpurple', 'orange', 'gold', 'lightpink', 
+        'turquoise', 'yellowgreen', 'cyan', 'magenta'
+    ]
+
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 10))
+    fig.suptitle('Model Metrics After Pruning', fontsize=18)
+
+    color_idx = 0
+
+    for ax, (group_name, group_metrics) in zip(axes.flat, groups.items()):
+        labels, values = zip(*group_metrics)
+        values = [v.cpu().item() if torch.is_tensor(v) else v for v in values]  # Ensure values are on CPU and converted to numbers
+
+        bar_colors = colors[color_idx:color_idx+len(labels)]
+        bars = ax.barh(range(len(labels)), values, color=bar_colors)
+        ax.set_title(group_name, fontsize=14)
+        ax.set_yticks(range(len(labels)))
+        ax.set_yticklabels(labels, rotation=0, ha='right')
+        
+        for i, bar in enumerate(bars):
+            ax.text(bar.get_width(), bar.get_y() + bar.get_height()/2.0, f'{values[i]:.2f}', va='center', ha='left', fontsize=10, color='black')
+        
+        color_idx += len(labels)
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    os.makedirs(output_dir, exist_ok=True)
+    plot_path = os.path.join(output_dir, 'model_metrics.png')
+    plt.savefig(plot_path)
+    plt.close()
+    print(f"Plot saved at {plot_path}")
+
+
+
 import torch
 import torch_pruning as tp
+
 
 def prune_and_save_model(pruned_model, save_path, device='cpu'):
     """
@@ -156,7 +223,7 @@ def prune_and_save_model(pruned_model, save_path, device='cpu'):
     None
     """
     # Set model to evaluation mode
-    #pruned_model.eval()
+    pruned_model.eval()
     pruned_model.to(device)
 
     for name, module in pruned_model.named_modules():
@@ -188,10 +255,6 @@ def prune_and_save_model(pruned_model, save_path, device='cpu'):
    # pruned_model.zero_grad()  # We don't want to store gradient information
     torch.save(pruned_model, save_path)
     return pruned_model
-
-# Example usage
-# pruned_model = ...  # Your model here
-# prune_and_save_model(pruned_model, './vgg_cifar10_arch_pruned_net.pth', device='cuda' if torch.cuda.is_available() else 'cpu')
 
 
 def main():
@@ -302,8 +365,8 @@ def main():
         if os.path.isfile(args.resume):
             print_log("=> loading checkpoint '{}'".format(args.resume), log)
             checkpoint = torch.load(args.resume)
-            recorder = checkpoint['recorder']
-            args.start_epoch = checkpoint['epoch']
+            # recorder = checkpoint['recorder']
+            # args.start_epoch = checkpoint['epoch']
             if args.use_state_dict:
                 net.load_state_dict(checkpoint['state_dict'])
             else:
@@ -335,7 +398,7 @@ def main():
             pruned_model = prune_and_save_model(model, os.path.join(args.save_path, 'pruned_arch.pth'), device=device)
             
             time1 = time.time()
-            test(test_loader, pruned_model, log)
+            validate(test_loader, pruned_model, criterion, log)
             time2 = time.time()
             print('Function took %0.3f ms' % ((time2 - time1) * 1000.0))
             
@@ -422,7 +485,15 @@ def main():
         start_time = time.time()
         recorder.plot_curve(os.path.join(args.save_path, 'training_plots.png'))
 
-    log.close()
+    input_shape = (1, 3, 32, 32)  # Example input shape, adjust according to your model
+
+    metrics = calculate_parameters_and_size(model)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    fps = calculate_fps(model, input_shape, device=device)
+    total_time, num_images, time_per_image, val_acc_1, val_los_1 = get_test_loader_time(test_loader, model, criterion, log)
+    
+    plot_metrics(metrics, fps, total_time, time_per_image, val_acc_1, val_los_1, args.output_dir)
+
 
 
 # train function (forward, backward, update)

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Compress and Train UNet Model</h1>
+<div style="display: flex; justify-content: space-between;">
+    <form method="post" action="/unet/stream_output" id="training-form" style="width: 25%;">
+        <label for="model">Model:</label>
+        <select id="model" name="model" required>
+            <option value="unet">UNet</option>
+        </select><br>
+
+        <label for="algorithm">Algorithm:</label>
+        <select id="algorithm" name="algorithm" required>
+            <option value="">Select Algorithm</option>
+            <option value="FPGM">FPGM</option>
+            <option value="L1">L1</option>
+            <option value="L2">L2</option>
+        </select><br>
+
+        <div id="main-params" style="display: none;">
+            <label for="dataset">Dataset:</label>
+            <input type="text" id="dataset" name="dataset" value="CARVANA"><br>
+            <label for="epochs">Epochs:</label>
+            <input type="number" id="epochs" name="epochs" value="10"><br>
+            <label for="output_dir">Output Directory:</label>
+            <input type="text" id="output_dir" name="output_dir" value="output_unet"><br>
+            <label for="resume">Resume:</label>
+            <input type="text" id="resume" name="resume" value=""><br>
+
+            <div id="rate_dist_field" style="display: none;">
+                <label for="rate_dist">Rate Dist:</label>
+                <input type="text" id="rate_dist" name="rate_dist" value="0"><br>
+            </div>
+            <div id="rate_norm_field" style="display: none;">
+                <label for="rate_norm">Remaining Parameters after Compression:</label>
+                <input type="text" id="rate_norm" name="rate_norm" value="0.7"><br>
+            </div>
+
+            <button type="button" id="toggle-settings">Show/Hide Advanced Settings</button>
+            <div id="advanced-settings" style="display: none;">
+                <label for="nproc_per_node">Number of GPUs:</label>
+                <input type="number" id="nproc_per_node" name="nproc_per_node" value="3"><br>
+                <label for="batch_size">Batch Size:</label>
+                <input type="number" id="batch_size" name="batch_size" value="3"><br>
+                <label for="lr">Learning Rate:</label>
+                <input type="text" id="lr" name="lr" value="0.001"><br>
+            </div>
+        </div>
+
+        <button type="submit" style="margin-top: 20px;">Run Command</button>
+    </form>
+
+    <div style="width: 70%;">
+        <h2>Training Curves</h2>
+        <img id="training-image" src="" alt="Training Accuracy Image" style="max-width: 100%; margin-bottom: 20px;">
+        <h2>Model Metrics</h2>
+        <img id="metrics-image" src="" alt="Model Metrics Image" style="max-width: 100%;">
+        <div id="output" style="white-space: pre-wrap; max-height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9; margin-top: 20px;"></div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('algorithm').addEventListener('change', function() {
+        var mainParams = document.getElementById('main-params');
+        var algorithm = this.value;
+
+        document.getElementById('rate_dist_field').style.display = 'none';
+        document.getElementById('rate_norm_field').style.display = 'none';
+
+        if (algorithm) {
+            mainParams.style.display = 'block';
+        } else {
+            mainParams.style.display = 'none';
+        }
+
+        if (algorithm === 'FPGM') {
+            document.getElementById('rate_dist_field').style.display = 'block';
+        } else if (algorithm === 'L1' || algorithm === 'L2') {
+            document.getElementById('rate_norm_field').style.display = 'block';
+        }
+    });
+
+    document.getElementById('toggle-settings').addEventListener('click', function() {
+        var advancedSettings = document.getElementById('advanced-settings');
+        if (advancedSettings.style.display === 'none') {
+            advancedSettings.style.display = 'block';
+        } else {
+            advancedSettings.style.display = 'none';
+        }
+    });
+
+    const form = document.getElementById('training-form');
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData).toString();
+        const outputDir = formData.get('output_dir');
+        const eventSource = new EventSource(`/unet/stream_output?${params}`);
+        const outputDiv = document.getElementById('output');
+        const trainingImage = document.getElementById('training-image');
+        const metricsImage = document.getElementById('metrics-image');
+
+        const trainingImageUrl = `/unet/images/${outputDir}/training_plots.png`;
+        const metricsImageUrl = `/unet/images/${outputDir}/model_metrics.png`;
+        console.log("Training Image URL: ", trainingImageUrl);
+        console.log("Metrics Image URL: ", metricsImageUrl);
+        trainingImage.src = trainingImageUrl;
+        metricsImage.src = metricsImageUrl;
+
+        outputDiv.innerHTML = '';
+        eventSource.onmessage = function(event) {
+            const lines = outputDiv.innerHTML.split('<br>');
+            if (lines.length > 100) {
+                lines.splice(0, lines.length - 100); // Keep only the last 100 lines
+            }
+            outputDiv.innerHTML = lines.join('<br>') + '<br>' + event.data;
+            outputDiv.scrollTop = outputDiv.scrollHeight; // Auto-scroll to the bottom
+        };
+
+        function refreshImages() {
+            const timestamp = new Date().getTime();
+            const trainingUrl = trainingImage.src.split('?')[0];
+            const metricsUrl = metricsImage.src.split('?')[0];
+            trainingImage.src = `${trainingUrl}?timestamp=${timestamp}`;
+            metricsImage.src = `${metricsUrl}?timestamp=${timestamp}`;
+        }
+        setInterval(refreshImages, 5000); // Refresh images every 5 seconds
+    });
+</script>
+{% endblock %}

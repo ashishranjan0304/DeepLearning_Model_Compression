@@ -389,9 +389,9 @@ class SynSNIP(Pruner):
 
 import torch
 
-class MagSNIP(Pruner):
+class OurAlgo(Pruner):
     def __init__(self, masked_parameters, mag_weight=0.5, snip_weight=0.5):
-        super(MagSNIP, self).__init__(masked_parameters)
+        super(OurAlgo, self).__init__(masked_parameters)
         self.mag_weight = mag_weight
         self.snip_weight = snip_weight
 

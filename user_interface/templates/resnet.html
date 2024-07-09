@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Train ResNet Model</h1>
-<form method="post" action="/resnet/stream_output" id="training-form">
-    <label for="model">Model:</label>
-    <select id="model" name="model" required>
-        <option value="resnet">ResNet</option>
-    </select><br>
+<h1>Compress and Train ResNet Model</h1>
+<div style="display: flex; justify-content: space-between;">
+    <form method="post" action="/resnet/stream_output" id="training-form" style="width: 25%;">
+        <label for="model">Model:</label>
+        <select id="model" name="model" required>
+            <option value="resnet">ResNet</option>
+        </select><br>
 
-    <div id="algorithm-fields">
         <label for="algorithm">Algorithm:</label>
         <select id="algorithm" name="algorithm" required>
             <option value="">Select Algorithm</option>
@@ -20,89 +20,120 @@
             <option value="GRASP">GRASP</option>
             <option value="our_algo">our_algo</option>
         </select><br>
-    </div>
 
-    <div id="arch-fields">
-        <label for="arch">Architecture:</label>
-        <input type="text" id="arch" name="arch" required><br>
-    </div>
-
-    <div id="main-params">
-        <div id="main-params-fpgm-l1-l2" style="display: none;">
+        <div id="main-params" style="display: none;">
+            <label for="arch">Architecture:</label>
+            <input type="text" id="arch" name="arch" required><br>
             <label for="dataset">Dataset:</label>
             <input type="text" id="dataset" name="dataset" value="cifar10"><br>
             <label for="epochs">Epochs:</label>
             <input type="number" id="epochs" name="epochs" value="60"><br>
-            <label for="batch_size">Batch Size:</label>
-            <input type="number" id="batch_size" name="batch_size" value="256"><br>
             <label for="output_dir">Output Directory:</label>
             <input type="text" id="output_dir" name="output_dir" value="output_resnet"><br>
-            <label for="learning_rate">Learning Rate:</label>
-            <input type="text" id="learning_rate" name="learning_rate" value="0.01"><br>
-            <label for="layer_begin">Layer Begin:</label>
-            <input type="number" id="layer_begin" name="layer_begin" value="0"><br>
-            <label for="layer_end">Layer End:</label>
-            <input type="number" id="layer_end" name="layer_end" value="320"><br>
-            <label for="layer_inter">Layer Inter:</label>
-            <input type="number" id="layer_inter" name="layer_inter" value="3"><br>
-            <label for="ngpu">Number of GPUs:</label>
-            <input type="number" id="ngpu" name="ngpu" value="3"><br>
+            <label for="resume">Resume:</label>
+            <input type="text" id="resume" name="resume" value=""><br>
+
+            <div id="compression-rate-field" style="display: none;">
+                <label for="compression">Compression:</label>
+                <input type="text" id="compression" name="compression" value="0.5"><br>
+            </div>
             <div id="rate_dist_field" style="display: none;">
                 <label for="rate_dist">Rate Dist:</label>
                 <input type="text" id="rate_dist" name="rate_dist" value="0.6"><br>
             </div>
             <div id="rate_norm_field" style="display: none;">
-                <label for="rate_norm">Rate Norm:</label>
+                <label for="rate_norm">Remaining Parameters after Compression:</label>
                 <input type="text" id="rate_norm" name="rate_norm" value="0.6"><br>
+            </div>
+
+            <button type="button" id="toggle-settings">Show/Hide Advanced Settings</button>
+            <div id="advanced-settings" style="display: none; margin-top: 10px;">
+                <div id="main-params-fpgm-l1-l2" style="display: none;">
+                    <label for="batch_size">Batch Size:</label>
+                    <input type="number" id="batch_size" name="batch_size" value="256"><br>
+                    <label for="learning_rate">Learning Rate:</label>
+                    <input type="text" id="learning_rate" name="learning_rate" value="0.01"><br>
+                    <label for="layer_begin">Layer Begin:</label>
+                    <input type="number" id="layer_begin" name="layer_begin" value="0"><br>
+                    <label for="layer_end">Layer End:</label>
+                    <input type="number" id="layer_end" name="layer_end" value="320"><br>
+                    <label for="layer_inter">Layer Inter:</label>
+                    <input type="number" id="layer_inter" name="layer_inter" value="3"><br>
+                    <label for="ngpu">Number of GPUs:</label>
+                    <input type="number" id="ngpu" name="ngpu" value="3"><br>
+                </div>
+
+                <div id="main-params-snip-synflow-our_algo" style="display: none;">
+                    <label for="batch_size">Batch Size:</label>
+                    <input type="number" id="batch_size" name="batch_size" value="256"><br>
+                    <label for="pruner">Pruner:</label>
+                    <input type="text" id="pruner" name="pruner" value=""><br>
+                    <label for="gpu">GPU:</label>
+                    <input type="number" id="gpu" name="gpu" value="0"><br>
+                    <input type="checkbox" id="pretrained" name="pretrained">
+                    <label for="pretrained">Pretrained</label><br>
+                    <label for="pretrained_path">Pretrained Path:</label>
+                    <input type="text" id="pretrained_path" name="pretrained_path" value="resnet32_0.5C/best_model.pth"><br>
+                    <label for="experiment">Experiment:</label>
+                    <select id="experiment" name="experiment">
+                        <option value="singleshot">Singleshot</option>
+                        <option value="multishot">Multishot</option>
+                    </select><br>
+                    <label for="prune_epochs">Prune Epochs:</label>
+                    <input type="number" id="prune_epochs" name="prune_epochs" value="3"><br>
+                </div>
             </div>
         </div>
 
-        <div id="main-params-snip-synflow-our_algo" style="display: none;">
-            <label for="dataset">Dataset:</label>
-            <input type="text" id="dataset" name="dataset" value="cifar10"><br>
-            <label for="epochs">Epochs:</label>
-            <input type="number" id="epochs" name="epochs" value="1"><br>
-            <label for="batch_size">Batch Size:</label>
-            <input type="number" id="batch_size" name="batch_size" value="256"><br>
-            <label for="output_dir">Output Directory:</label>
-            <input type="text" id="output_dir" name="output_dir" value="output_resnet"><br>
-            <label for="compression">Compression:</label>
-            <input type="text" id="compression" name="compression" value="0.5"><br>
-            <label for="pruner">Pruner:</label>
-            <input type="text" id="pruner" name="pruner" value=""><br>
-            <label for="gpu">GPU:</label>
-            <input type="number" id="gpu" name="gpu" value="0"><br>
-            <input type="checkbox" id="prune" name="prune">
-            <label for="prune">Apply Pruning</label><br>
-        </div>
+        <button type="submit" style="margin-top: 20px;">Run Command</button>
+    </form>
+
+    <div style="width: 70%;">
+        <h2>Training Curves</h2>
+        <img id="training-image" src="" alt="Training Accuracy Image" style="max-width: 100%; margin-bottom: 20px;">
+        <h2>Model Metrics</h2>
+        <img id="metrics-image" src="" alt="Model Metrics Image" style="max-width: 100%;">
+        <div id="output" style="white-space: pre-wrap; max-height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9; margin-top: 20px;"></div>
     </div>
-
-    <button type="submit">Run Command</button>
-</form>
-
-<h2>Training Accuracy</h2>
-<img id="training-image" src="" alt="Training Accuracy Image" style="max-width: 100%;">
-
-<div id="output"></div>
+</div>
 
 <script>
     document.getElementById('algorithm').addEventListener('change', function() {
         var mainParams = document.getElementById('main-params');
         var algorithm = this.value;
 
+        document.getElementById('compression-rate-field').style.display = 'none';
+        document.getElementById('rate_dist_field').style.display = 'none';
+        document.getElementById('rate_norm_field').style.display = 'none';
         document.getElementById('main-params-fpgm-l1-l2').style.display = 'none';
         document.getElementById('main-params-snip-synflow-our_algo').style.display = 'none';
 
-        if (algorithm === 'FPGM' || algorithm === 'L1' || algorithm === 'L2') {
+        if (algorithm) {
+            mainParams.style.display = 'block';
+        } else {
+            mainParams.style.display = 'none';
+        }
+
+        if (algorithm === 'FPGM') {
+            document.getElementById('rate_dist_field').style.display = 'block';
             document.getElementById('main-params-fpgm-l1-l2').style.display = 'block';
-            document.getElementById('rate_dist_field').style.display = (algorithm === 'FPGM') ? 'block' : 'none';
-            document.getElementById('rate_norm_field').style.display = (algorithm !== 'FPGM') ? 'block' : 'none';
+        } else if (algorithm === 'L1' || algorithm === 'L2') {
+            document.getElementById('rate_norm_field').style.display = 'block';
+            document.getElementById('main-params-fpgm-l1-l2').style.display = 'block';
         } else if (algorithm === 'SNIP' || algorithm === 'Synflow' || algorithm === 'GRASP' || algorithm === 'our_algo') {
+            document.getElementById('compression-rate-field').style.display = 'block';
             document.getElementById('main-params-snip-synflow-our_algo').style.display = 'block';
             document.getElementById('pruner').value = algorithm.toLowerCase();
         }
+    });
 
-        mainParams.style.display = 'block';
+    document.getElementById('toggle-settings').addEventListener('click', function() {
+        var advancedSettings = document.getElementById('advanced-settings');
+        if (advancedSettings.style.display === 'none') {
+            advancedSettings.style.display = 'block';
+        } else {
+            advancedSettings.style.display = 'none';
+        }
     });
 
     const form = document.getElementById('training-form');
@@ -114,15 +145,17 @@
         const eventSource = new EventSource(`/resnet/stream_output?${params}`);
         const outputDiv = document.getElementById('output');
         const trainingImage = document.getElementById('training-image');
+        const metricsImage = document.getElementById('metrics-image');
 
-        // Correctly set the image src based on outputDir
-        trainingImage.src = `/resnet/images/${outputDir}/training_plots.png`;
+        const trainingImageUrl = `/resnet/images/${outputDir}/training_plots.png`;
+        const metricsImageUrl = `/resnet/images/${outputDir}/model_metrics.png`;
+        console.log("Training Image URL: ", trainingImageUrl);
+        console.log("Metrics Image URL: ", metricsImageUrl);
+        trainingImage.src = trainingImageUrl;
+        metricsImage.src = metricsImageUrl;
 
         outputDiv.innerHTML = '';
         eventSource.onmessage = function(event) {
-            if (event.data.includes('Process completed')) {
-                eventSource.close();
-            }
             const lines = outputDiv.innerHTML.split('<br>');
             if (lines.length > 100) {
                 lines.splice(0, lines.length - 100); // Keep only the last 100 lines
@@ -131,15 +164,14 @@
             outputDiv.scrollTop = outputDiv.scrollHeight; // Auto-scroll to the bottom
         };
 
-        function refreshImage() {
+        function refreshImages() {
             const timestamp = new Date().getTime();
-            const url = trainingImage.src.split('?')[0];
-            trainingImage.src = `${url}?timestamp=${timestamp}`;
+            const trainingUrl = trainingImage.src.split('?')[0];
+            const metricsUrl = metricsImage.src.split('?')[0];
+            trainingImage.src = `${trainingUrl}?timestamp=${timestamp}`;
+            metricsImage.src = `${metricsUrl}?timestamp=${timestamp}`;
         }
-        setInterval(refreshImage, 5000); // Refresh image every 5 seconds
+        setInterval(refreshImages, 5000); // Refresh images every 5 seconds
     });
 </script>
-
-
-
 {% endblock %}

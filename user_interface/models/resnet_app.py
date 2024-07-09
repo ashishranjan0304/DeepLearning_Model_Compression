@@ -20,7 +20,6 @@ def stream_output():
     algorithm = request.args.get('algorithm')
     arch = request.args.get('arch')
 
-    # Common parameters for all algorithms
     common_params = {
         'dataset': request.args.get('dataset'),
         'output_dir': request.args.get('output_dir'),
@@ -28,11 +27,9 @@ def stream_output():
         'batch_size': request.args.get('batch_size'),
     }
 
-    # Filter out None values from common_params
     common_params = {k: v for k, v in common_params.items() if v is not None}
 
     if algorithm in ['L1', 'L2']:
-        # Parameters specific to L1 and L2 algorithms
         algo_params = {
             'rate_norm': request.args.get('rate_norm'),
             'layer_begin': request.args.get('layer_begin'),
@@ -40,11 +37,12 @@ def stream_output():
             'layer_inter': request.args.get('layer_inter'),
             'ngpu': request.args.get('ngpu'),
             'learning_rate': request.args.get('learning_rate'),
-            'arch': arch
+            'arch': arch,
+            'dist_type': algorithm.lower()
         }
-        algo_params['dist_type'] = algorithm.lower()
+        if request.args.get('resume'):
+            algo_params['resume'] = request.args.get('resume')
     elif algorithm == 'FPGM':
-        # Parameters specific to FPGM algorithm
         algo_params = {
             'rate_dist': request.args.get('rate_dist'),
             'layer_begin': request.args.get('layer_begin'),
@@ -52,25 +50,28 @@ def stream_output():
             'layer_inter': request.args.get('layer_inter'),
             'ngpu': request.args.get('ngpu'),
             'learning_rate': request.args.get('learning_rate'),
-            'arch': arch
+            'arch': arch,
         }
+        if request.args.get('resume'):
+            algo_params['resume'] = request.args.get('resume')
     elif algorithm in ['SNIP', 'Synflow', 'GRASP', 'our_algo']:
-        # Parameters specific to SNIP, Synflow, GRASP, and our_algo algorithms
         algo_params = {
             'compression': request.args.get('compression'),
             'pruner': request.args.get('pruner'),
             'gpu': request.args.get('gpu'),
-            'model': arch
+            'model': arch,
+            'experiment': request.args.get('experiment'),
+            'prune_epochs': request.args.get('prune_epochs')
         }
-        if request.args.get('prune'):
-            algo_params['prune'] = ''  # No value needed for --prune
+        if request.args.get('pretrained') == 'True':
+            algo_params['pretrained'] = 'True'
+            if request.args.get('pretrained_path'):
+                algo_params['pretrained_path'] = request.args.get('pretrained_path')
     else:
         return Response(f"Unrecognized algorithm {algorithm}", status=400)
 
-    # Filter out None values from algo_params
     algo_params = {k: v for k, v in algo_params.items() if v is not None}
 
-    # Combine common_params and algo_params
     params = {**common_params, **algo_params}
 
     logging.debug(f"Parameters: {params}")

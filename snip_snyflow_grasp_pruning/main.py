@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 import torch
@@ -8,10 +7,114 @@ from Utils import generator
 from Utils import metrics
 from train import *
 from prune import *
+import time
+
 
 import argparse
 import json
 import os
+
+import matplotlib.pyplot as plt
+import os
+
+def plot_model_metrics(model_metrics, fps, total_time, time_per_image, output_dir):
+    groups = {
+        'Parameters': [
+            ('Total Parameters', model_metrics['total_params']),
+            ('Pruned Parameters', model_metrics['pruned_params']),
+        ],
+        'FLOPs': [
+            ('Possible FLOPs', model_metrics['possible_flops']),
+            ('Total FLOPs', model_metrics['total_flops'])
+        ],
+        'Performance': [
+            ('Average FPS', fps),
+            ('Total Time (s)', total_time),
+            ('Time per Image (ms)', time_per_image)
+        ],
+        'Final Results': [
+            ('Train Loss', model_metrics['final_result']['train_loss']),
+            ('Test Loss', model_metrics['final_result']['test_loss']),
+            ('Train Accuracy', model_metrics['final_result']['train_accuracy1']),
+            ('Test Accuracy', model_metrics['final_result']['test_accuracy1']),
+        ]
+    }
+
+    colors = [
+        'skyblue', 'lightgreen', 'salmon', 'lightcoral',
+        'mediumpurple', 'orange', 'gold', 'lightpink',
+        'turquoise', 'yellowgreen', 'cyan', 'magenta'
+    ]
+
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(18, 12))
+    fig.suptitle('Model Metrics After Pruning', fontsize=20)
+
+    color_idx = 0
+
+    for ax, (group_name, group_metrics) in zip(axes.flatten(), groups.items()):
+        labels, values = zip(*group_metrics)
+        values = [v.cpu().item() if torch.is_tensor(v) else v for v in values]  # Ensure values are on CPU and converted to numbers
+
+        bar_colors = colors[color_idx:color_idx+len(labels)]
+        bars = ax.barh(range(len(labels)), values, color=bar_colors)
+        ax.set_title(group_name, fontsize=16)
+        ax.set_yticks(range(len(labels)))
+        ax.set_yticklabels(labels, rotation=0, ha='right')
+
+        for i, bar in enumerate(bars):
+            ax.text(bar.get_width(), bar.get_y() + bar.get_height()/2.0, f'{values[i]:.2f}', va='center', ha='left', fontsize=12, color='black')
+
+        color_idx += len(labels)
+
+    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
+    os.makedirs(output_dir, exist_ok=True)
+    plot_path = os.path.join(output_dir, 'model_metrics.png')
+    plt.savefig(plot_path)
+    plt.close()
+    print(f"Plot saved at {plot_path}")
+
+
+def calculate_fps(net, input_shape, device='cpu', num_iterations=100):
+    net.to(device)
+    net.eval()
+    total_time = 0.0
+
+    for _ in range(num_iterations):
+        input_data = torch.randn(*input_shape).to(device)
+        start_time = time.time()
+        with torch.no_grad():
+            net(input_data)
+        end_time = time.time()
+        total_time += end_time - start_time
+
+    avg_fps = num_iterations / total_time
+    return avg_fps
+
+def evaluate_model(model, loss, dataloader, device, verbose):
+    model.eval()
+    total = 0
+    correct1 = 0
+    start_time = time.time()
+    with torch.no_grad():
+        for data, target in dataloader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            total += loss(output, target).item() * data.size(0)
+            _, pred = output.topk(1, dim=1)
+            correct1 += pred.eq(target.view(-1, 1)).sum().item()
+    end_time = time.time()
+    total_time = end_time - start_time
+    average_loss = total / len(dataloader.dataset)
+    accuracy1 = 100. * correct1 / len(dataloader.dataset)
+    time_per_image = (total_time / len(dataloader.dataset)) * 1000  # Convert to milliseconds
+
+    if verbose:
+        print('Evaluation: Average loss: {:.4f}, Top 1 Accuracy: {}/{} ({:.2f}%)'.format(
+            average_loss, correct1, len(dataloader.dataset), accuracy1))
+        print('Total time: {:.4f} seconds, Time per image: {:.4f} ms'.format(
+            total_time, time_per_image))
+    
+    return average_loss, accuracy1, total_time, time_per_image
 
 def get_masks(module):
     """Returns an iterator over module masks, yielding the mask."""
@@ -70,6 +173,7 @@ def run(args):
     ## Random Seed and Device ##
     torch.manual_seed(args.seed)
     device = load.device(args.gpu)
+    args.post_epochs=args.epochs
 
     ## Data ##
     print('Loading {} dataset.'.format(args.dataset))
@@ -102,7 +206,8 @@ def run(args):
             print('Pruning epoch {} of {}'.format(epoch + 1, args.prune_epochs))
             pruner = load.pruner(args.pruner)(generator.masked_parameters(model, args.prune_bias, args.prune_batchnorm, args.prune_residual))
             # Increase sparsity over the first `args.sparsity_increase_epochs` epochs
-            sparsity = 10**(-float(args.compression) * ((epoch + 1) / args.prune_epochs))
+            #sparsity = 10**(-float(args.compression) * ((epoch + 1) / args.prune_epochs))
+            sparsity=1-float(args.compression)* ((epoch + 1) / args.prune_epochs)
             prune_loop(model, loss, pruner, prune_loader, device, sparsity, 
                        args.compression_schedule, args.mask_scope, 1, args.reinitialize, args.prune_train_mode, args.shuffle, args.invert)
             
@@ -112,24 +217,28 @@ def run(args):
         # Single-shot pruning
         print('Pruning with {} for {} epochs.'.format(args.pruner, args.prune_epochs))
         pruner = load.pruner(args.pruner)(generator.masked_parameters(model, args.prune_bias, args.prune_batchnorm, args.prune_residual))
-        sparsity = 10**(-float(args.compression))
+        #sparsity = 10**(-float(args.compression))
+        sparsity=1-float(args.compression)
         prune_loop(model, loss, pruner, prune_loader, device, sparsity, 
                    args.compression_schedule, args.mask_scope, args.prune_epochs, args.reinitialize, args.prune_train_mode, args.shuffle, args.invert)
 
+    apply_masks(model)
     ## Post-Train ##
     print('Post-Training for {} epochs.'.format(args.post_epochs))
     post_result = train_eval_loop(model, loss, optimizer, scheduler, train_loader, 
-                                  test_loader, device, args.post_epochs, args.verbose, args.result_dir) 
+                                test_loader, device, args.post_epochs, args.verbose, args.result_dir) 
 
     ## Display Results ##
     frames = [pre_result.head(1), pre_result.tail(1), post_result.head(1), post_result.tail(1)]
     train_result = pd.concat(frames, keys=['Init.', 'Pre-Prune', 'Post-Prune', 'Final'])
+
     prune_result = metrics.summary(model, 
-                                   pruner.scores,
-                                   metrics.flop(model, input_shape, device),
-                                   lambda p: generator.prunable(p, args.prune_batchnorm, args.prune_residual))
+                                pruner.scores,
+                                metrics.flop(model, input_shape, device),
+                                lambda p: generator.prunable(p, args.prune_batchnorm, args.prune_residual))
     total_params = int((prune_result['sparsity'] * prune_result['size']).sum())
     possible_params = prune_result['size'].sum()
+    pruned_parameters = total_params - possible_params
     total_flops = int((prune_result['sparsity'] * prune_result['flops']).sum())
     possible_flops = prune_result['flops'].sum()
     print("Train results:\n", train_result)
@@ -137,10 +246,37 @@ def run(args):
     print("Parameter Sparsity: {}/{} ({:.4f})".format(total_params, possible_params, total_params / possible_params))
     print("FLOP Sparsity: {}/{} ({:.4f})".format(total_flops, possible_flops, total_flops / possible_flops))
 
-    apply_masks(model)
+    # Extract the 'Final' row directly
+    final_result = train_result.loc['Final'].iloc[-1][['train_loss', 'test_loss', 'train_accuracy1', 'test_accuracy1']]
+
+    print("Final Training Results:\n", final_result)
+
+
     # Calculate and print the sparsity
     sparsity_dict, total_params, sparse_params, overall_sparsity = calculate_sparsity(model)
     print_sparsity(sparsity_dict, total_params, sparse_params, overall_sparsity)
+
+    # Calculate FPS
+    input_shape = (1, 3, 32, 32)  # Example input shape, adjust according to your model
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print("Calculating FPS...")
+    fps = calculate_fps(model, input_shape, device=device)
+    print("Average FPS:", fps)
+
+    # Collect model metrics
+    model_metrics = {
+        'total_params': total_params,
+        'pruned_params': sparse_params,
+        'possible_flops': possible_flops,
+        'total_flops': total_flops,
+        'final_result': final_result
+    }
+
+    _, _, total_time, time_per_image = evaluate_model(model, loss, test_loader, device, args.verbose)
+
+    # Plot model metrics
+    plot_model_metrics(model_metrics, fps, total_time, time_per_image, output_dir=args.output_dir)
+
 
     ## Save Results and Model ##
     if args.save:
@@ -184,7 +320,7 @@ def define_args():
     training_args.add_argument('--pre-epochs', type=int, default=0,
                                help='number of epochs to train before pruning (default: 0)')
     training_args.add_argument('--epochs', default=10, type=int, help='Number of training epochs')
-    training_args.add_argument('--post-epochs', type=int, default=10,
+    training_args.add_argument('--post_epochs', type=int, default=10,
                                help='number of epochs to train after pruning (default: 10)')
     training_args.add_argument('--lr', type=float, default=0.001,
                                help='learning rate (default: 0.001)')
@@ -200,11 +336,11 @@ def define_args():
     # Pruning Hyperparameters
     pruning_args = parser.add_argument_group('pruning')
     pruning_args.add_argument('--pruner', type=str, default='rand',
-                              choices=['rand', 'mag', 'snip', 'grasp', 'synflow'],
+                              choices=['rand', 'mag', 'snip', 'grasp', 'synflow', 'our_algo'],
                               help='prune strategy (default: rand)')
     pruning_args.add_argument('--compression', type=float, default=0.0,
                               help='quotient of prunable non-zero prunable parameters before and after pruning (default: 1.0)')
-    pruning_args.add_argument('--prune_epochs', type=int, default=1,
+    pruning_args.add_argument('--prune_epochs', type=int, default=3,
                               help='number of iterations for scoring (default: 1)')
     pruning_args.add_argument('--compression-schedule', type=str, default='exponential', choices=['linear', 'exponential'],
                               help='whether to use a linear or exponential compression schedule (default: exponential)')

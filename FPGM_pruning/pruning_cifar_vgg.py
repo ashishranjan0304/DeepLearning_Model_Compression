@@ -20,9 +20,9 @@ from models.vgg_cifar10 import vgg
 parser = argparse.ArgumentParser(description='PyTorch Slimming CIFAR training')
 parser.add_argument('data_path', type=str, help='Path to dataset')
 parser.add_argument('--dataset', type=str, default='cifar100', help='training dataset (default: cifar100)')
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('--batch_size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
-parser.add_argument('--test-batch-size', type=int, default=256, metavar='N',
+parser.add_argument('--test_batch_size', type=int, default=256, metavar='N',
                     help='input batch size for testing (default: 256)')
 parser.add_argument('--epochs', type=int, default=160, metavar='N', help='number of epochs to train (default: 160)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N', help='manual epoch number (useful on restarts)')
@@ -71,6 +71,77 @@ if not os.path.exists(args.save_path):
     os.makedirs(args.save_path)
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+
+def get_test_loader_time(test_loader, net, log):
+    start_time = time.time()
+    val_acc_1, val_los_1 = test(test_loader, net, log)
+    end_time = time.time()
+    total_time = end_time - start_time
+    num_images = len(test_loader.dataset)
+    time_per_image = (total_time / num_images) * 1000  # Convert to milliseconds
+    total_time = total_time * 1000  # Convert to milliseconds
+    return total_time, num_images, time_per_image, val_acc_1 * 100, val_los_1
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_metrics(metrics, fps, total_time, time_per_image, val_acc_1, val_los_1, output_dir):
+    groups = {
+        'Parameters': [
+            ('Total Trainable Parameters', metrics['total_trainable']),
+            ('Pruned Parameters', metrics['pruned_params']),
+            ('Remaining Parameters', metrics['remaining_params'])
+        ],
+        'Model Size (MB)': [
+            ('Model Size (MB)', metrics['model_size_MB']),
+            ('Pruned Model Size (MB)', metrics['pruned_model_size_MB'])
+        ],
+        'Performance': [
+            ('Average FPS', fps),
+            ('Total Time (ms)', total_time),
+            ('Time per Image (ms)', time_per_image)
+        ],
+        'Validation Metrics': [
+            ('Val Accuracy (%)', val_acc_1),
+            ('Val Loss', val_los_1)
+        ]
+    }
+
+    colors = [
+        'skyblue', 'lightgreen', 'salmon', 'lightcoral', 
+        'mediumpurple', 'orange', 'gold', 'lightpink', 
+        'turquoise', 'yellowgreen', 'cyan', 'magenta'
+    ]
+
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 12))
+    fig.suptitle('Model Metrics After Pruning', fontsize=20)
+
+    color_idx = 0
+
+    for ax, (group_name, group_metrics) in zip(axes.flat, groups.items()):
+        labels, values = zip(*group_metrics)
+        values = [v.cpu().item() if torch.is_tensor(v) else v for v in values]  # Ensure values are on CPU and converted to numbers
+
+        bar_colors = colors[color_idx:color_idx+len(labels)]
+        bars = ax.barh(range(len(labels)), values, color=bar_colors)
+        ax.set_title(group_name, fontsize=16)
+        ax.set_yticks(range(len(labels)))
+        ax.set_yticklabels(labels, rotation=0, ha='right')
+        
+        for i, bar in enumerate(bars):
+            ax.text(bar.get_width(), bar.get_y() + bar.get_height()/2.0, f'{values[i]:.2f}', va='center', ha='left', fontsize=12, color='black')
+        
+        color_idx += len(labels)
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    os.makedirs(output_dir, exist_ok=True)
+    plot_path = os.path.join(output_dir, 'model_metrics.png')
+    plt.savefig(plot_path)
+    plt.close()
+    print(f"Plot saved at {plot_path}")
+
+
 
 def calculate_parameters_and_size(net):
     total_trainable = 0
@@ -121,6 +192,14 @@ def calculate_parameters_and_size(net):
     pruned_model_size_MB = pruned_model_size / (1024 ** 2)
     print("Model size (MB):", model_size_MB)
     print("Model size after pruning (MB):", pruned_model_size_MB)
+    
+    return {
+        'total_trainable': total_trainable,
+        'pruned_params': pruned_params,
+        'remaining_params': remaining_params,
+        'model_size_MB': model_size_MB,
+        'pruned_model_size_MB': pruned_model_size_MB
+    }
 
 def calculate_fps(net, input_shape, device='cpu', num_iterations=10000):
     net.to(device)
@@ -139,7 +218,7 @@ def calculate_fps(net, input_shape, device='cpu', num_iterations=10000):
     return avg_fps
 
 import torch
-#import torch_pruning as tp
+import torch_pruning as tp
 
 def prune_and_save_model(pruned_model, save_path, device='cpu'):
     """
@@ -282,13 +361,13 @@ def main():
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
             checkpoint = torch.load(args.resume)
-            args.start_epoch = checkpoint['epoch']
-            best_prec1 = checkpoint['best_prec1']
-            model = vgg(dataset='cifar10', depth=16, cfg=checkpoint['cfg'])
+            # args.start_epoch = checkpoint['epoch']
+            # best_prec1 = checkpoint['best_prec1']
+            model = vgg(args.dataset, depth=args.depth)
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {}) Prec1: {:f}"
-                  .format(args.resume, checkpoint['epoch'], best_prec1))
+            # print("=> loaded checkpoint '{}' (epoch {}) Prec1: {:f}"
+            #       .format(args.resume, checkpoint['epoch'], best_prec1))
             if args.cuda:
                 model = model.cuda()
         else:
@@ -386,6 +465,19 @@ def main():
 
         # Plot and save the curves
         plot_and_save_curves(history, args.save_path, epoch)
+    
+    input_shape = (1, 3, 32, 32)  # Example input shape, adjust according to your model
+
+    metrics = calculate_parameters_and_size(model)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    fps = calculate_fps(model, input_shape, device=device)
+    total_time, num_images, time_per_image, val_acc_1, val_los_1 = get_test_loader_time(test_loader, model, log)
+
+    plot_metrics(metrics, fps, total_time, time_per_image, val_acc_1, val_los_1, args.output_dir)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    pruned_model = prune_and_save_model(model, os.path.join(args.save_path, 'pruned_arch.pth'), device=device)
+            
+
 
 def train(train_loader, model, optimizer, epoch, log, m=0):
     model.train()

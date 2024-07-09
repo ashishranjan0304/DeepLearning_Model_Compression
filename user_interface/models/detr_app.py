@@ -9,6 +9,9 @@ logging.basicConfig(level=logging.DEBUG)
 def generate_output(command):
     logging.debug(f"Running command: {command}")
     process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True)
+    logging.debug(f"Command output: {process.stdout}")
+    logging.debug(f"Command error: {process.stderr}")
+    logging.debug(f"Command return code: {process.returncode}")
     return process.stdout, process.stderr, process.returncode
 
 @detr_blueprint.route('/stream_output')
@@ -17,7 +20,6 @@ def stream_output():
     algorithm = request.args.get('algorithm')
     nproc_per_node = request.args.get('nproc_per_node')
 
-    # Common parameters for all algorithms
     common_params = {
         'coco_path': request.args.get('coco_path'),
         'epochs': request.args.get('epochs'),
@@ -28,11 +30,9 @@ def stream_output():
         'resume': request.args.get('resume'),
     }
 
-    # Filter out None values from common_params
     common_params = {k: v for k, v in common_params.items() if v is not None}
 
     if algorithm in ['L1', 'L2']:
-        # Parameters specific to L1 and L2 algorithms
         algo_params = {
             'rate_norm': request.args.get('rate_norm'),
             'dist_type': algorithm.lower(),
@@ -40,14 +40,12 @@ def stream_output():
             'layer_end': request.args.get('layer_end')
         }
     elif algorithm == 'FPGM':
-        # Parameters specific to FPGM algorithm
         algo_params = {
             'rate_dist': request.args.get('rate_dist'),
             'layer_begin': request.args.get('layer_begin'),
             'layer_end': request.args.get('layer_end')
         }
     elif algorithm in ['SNIP', 'Synflow', 'our_algo']:
-        # Parameters specific to SNIP, Synflow, and our_algo algorithms
         algo_params = {
             'compression': request.args.get('compression'),
             'pruner': request.args.get('pruner')
@@ -55,18 +53,17 @@ def stream_output():
         if request.args.get('prune'):
             algo_params['prune'] = ''  # No value needed for --prune
     else:
-        # If the algorithm is not recognized, return an error
         return Response(f"Unrecognized algorithm {algorithm}", status=400)
 
-    # Filter out None values from algo_params
     algo_params = {k: v for k, v in algo_params.items() if v is not None}
 
-    # Combine common_params and algo_params
     params = {**common_params, **algo_params}
 
     script_name = '../DETR_pruning/prune_detr_FPGM_L1_L2.py' if algorithm in ['FPGM', 'L1', 'L2'] else '../DETR_pruning/detr_prune_snip_synflow.py'
 
     command = f"python -m torch.distributed.launch --nproc_per_node={nproc_per_node} --use_env {script_name} " + ' '.join([f"--{k}={v}" if v != '' else f"--{k}" for k, v in params.items()])
+
+    logging.debug(f"Constructed command: {command}")
 
     stdout, stderr, returncode = generate_output(command)
 
